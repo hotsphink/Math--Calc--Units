@@ -3,7 +3,7 @@ use base 'Exporter';
 use strict;
 
 use vars qw(@Registry @EXPORT_OK);
-@EXPORT_OK = qw(convert reduce);
+@EXPORT_OK = qw(convert reduce canonical find_top);
 
 sub add_unitSet {
     my $package = shift;
@@ -17,6 +17,7 @@ use Units::Calc::Convert::Multi register => \&add_unitSet;
 use Units::Calc::Convert::Time register => \&add_unitSet;
 #use Units::Calc::Convert::Distance register => \&add_unitSet;
 use Units::Calc::Convert::Byte register => \&add_unitSet;
+use Units::Calc::Convert::Combo register => \&add_unitSet;
 
 sub apply_all ($) {
     my $sub = shift;
@@ -157,7 +158,7 @@ sub convert {
     return [ $canon_from->[0] / $canon_to->[0], $unit ];
 }
 
-sub _find_top ($;$) {
+sub find_top ($;$) {
     my ($unit, $invert) = @_;
     if (! ref $unit) {
         return $unit unless $invert;
@@ -165,10 +166,10 @@ sub _find_top ($;$) {
     } elsif ($unit->[0] eq 'dot') {
         my @dots = @$unit;
         shift(@dots);
-        return map { _find_top($_, $invert) } @dots;
+        return map { find_top($_, $invert) } @dots;
     } elsif ($unit->[0] eq 'per') {
-        return _find_top($unit->[1], $invert),
-               _find_top($unit->[2], ! $invert);
+        return find_top($unit->[1], $invert),
+               find_top($unit->[2], ! $invert);
     } else {
         die "Unknown unit ".Dumper($unit);
     }
@@ -188,8 +189,8 @@ sub canonical {
     #                 or [ 'dot', ... ]
     #                 or unit
 
-    my @top = _find_top($v->[1]);
-    my @bottom = _find_top($v->[1], 'invert');
+    my @top = find_top($v->[1]);
+    my @bottom = find_top($v->[1], 'invert');
 
     my $recurse = 0;
 
@@ -221,8 +222,8 @@ sub reduce {
 sub canonical_form {
     my ($unit) = @_;
 
-    my @top = _find_top($unit);
-    my @bottom = _find_top($unit, 'invert');
+    my @top = find_top($unit);
+    my @bottom = find_top($unit, 'invert');
 
     return _canonical_reciprocal(\@top, \@bottom);
 }
@@ -264,10 +265,10 @@ sub _canonical_reciprocal {
 # Multiplies two canonical units together to form a canonical unit.
 sub _unit_mult ($$;$) {
     my ($u, $v, $do_reduce) = @_;
-    my @top = _find_top($u);
-    my @bottom = _find_top($u, 'invert');
-    push @top, _find_top($v);
-    push @bottom, _find_top($v, 'invert');
+    my @top = find_top($u);
+    my @bottom = find_top($u, 'invert');
+    push @top, find_top($v);
+    push @bottom, find_top($v, 'invert');
     return _canonical_reciprocal(\@top, \@bottom, $do_reduce);
 }
 
@@ -295,32 +296,6 @@ sub score {
     my $v = shift;
     return 1 if ($v->[0] > 1 && $v->[0] <= 999);
     return 0.5;
-}
-
-# 837473sec -> 12 weeks, 4 days, 2 hours, 3 sec
-# @units MUST BE SORTED, LARGER UNITS FIRST!
-sub spread {
-    my ($self, $v, @units) = @_;
-
-    my $orig = $v;
-
-    my @desc;
-    foreach my $unit (@units) {
-	last if $v->[0] == 0;
-	my $w = $self->convert($v, $unit);
-	if ($self->score($w) >= 1) {
-	    my $round = int($w->[0]);
-	    push @desc, [ $round, $w->[1] ];
-	    $w->[0] -= $round;
-	    $v = $w;
-	    # (check remainder's percentage of original)
-	}
-    }
-
-    # TODO: Cut off the spreading when the smaller units contribute
-    # inconsequential amounts
-
-    return @desc;
 }
 
 1;

@@ -1,10 +1,19 @@
 package Units::Calc::Convert::Byte;
 use base 'Units::Calc::Convert::Base2Metric';
 use strict;
-use vars qw(%units %pref %total_unit_map);
+use vars qw(%units %pref %ranges %total_unit_map);
 
 %units = ( bit => [ 1/8, 'byte' ] );
 %pref = ( bit => 0.1 );
+%ranges = ( default => [ 1, 999 ] );
+
+sub get_ranges {
+    return \%ranges;
+}
+
+sub get_prefs {
+    return \%pref;
+}
 
 # Return a list of the variants of byte: none
 sub variants {

@@ -1,7 +1,7 @@
 package Units::Calc::Convert::Time;
 use base 'Units::Calc::Convert::Metric';
 use strict;
-use vars qw(%units %pref %total_unit_map);
+use vars qw(%units %pref %ranges %total_unit_map);
 
 %units = ( minute => [ 60, 'sec' ],
 	   hour => [ 60, 'minute' ],
@@ -10,10 +10,20 @@ use vars qw(%units %pref %total_unit_map);
 	   min => [ 1, 'minute' ],
 );
 
-%pref = ( minute => 1.1,
+%pref = ( default => 1,
 	  hour => 1.2,
 	  day => 1.1,
 	  week => 0.4,
+	  minute => 1.1,
+);
+
+%ranges = ( default => [ 1, 300 ],
+	    millisec => [ 1, 999 ],
+	    sec => [ 1, 200 ],
+	    minute => [ 2, 100 ],
+	    hour => [ 1, 80 ],
+	    day => [ 1, undef ],
+	    week => [ 1, 4 ],
 );
 
 # Return a list of the variants of the canonical unit of time: 'sec'
@@ -86,6 +96,22 @@ sub describe {
     my @spread = $self->spread($v, 'week', 'day', 'hour', 'minute', 'sec',
 			       'ms', 'us', 'ns', 'ps');
     return (\@spread, $v); # Hmm... what type am I returning??
+}
+
+sub preference {
+    my ($self, $v) = @_;
+    my ($val, $unit) = @$v;
+    my $base = lc(($self->demetric($unit))[1]);
+    my $pref = $pref{$base} || $pref{default};
+    return $pref * $self->prefix_pref(substr($unit, 0, -length($base)));
+}
+
+sub get_ranges {
+    return \%ranges;
+}
+
+sub get_prefs {
+    return \%pref;
 }
 
 1;

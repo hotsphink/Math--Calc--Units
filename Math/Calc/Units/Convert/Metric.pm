@@ -21,7 +21,8 @@ use vars qw(%niceSmallMetric %metric %pref %abbrev $metric_prefix_test);
 	    %niceSmallMetric,
 );
 
-%pref = ( kilo => 0.8,
+%pref = ( unit => 1.0,
+	  kilo => 0.8,
 	  mega => 0.8,
 	  giga => 0.8,
 	  tera => 0.7,
@@ -83,6 +84,11 @@ sub get_abbrev_prefix {
     } else {
 	return;
     }
+}
+
+sub prefix_pref {
+    my ($self, $prefix) = @_;
+    return $pref{lc($prefix)} || $pref{unit};
 }
 
 # demetric : string => [ mult, base ]

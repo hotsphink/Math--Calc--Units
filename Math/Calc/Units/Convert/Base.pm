@@ -70,4 +70,49 @@ sub to_canonical {
     return $self->simple_convert([ 1, $unit ], $canon);
 }
 
+#################### RANKING, SCORING, DISPLAYING ##################
+
+# 837473sec -> 12 weeks, 4 days, 2 hours, 3 sec
+# @units MUST BE SORTED, LARGER UNITS FIRST!
+sub spread {
+    my ($self, $v, @units) = @_;
+
+    my $orig = $v;
+
+    my @desc;
+    foreach my $unit (@units) {
+	last if $v->[0] == 0;
+	my $w = $self->convert($v, $unit);
+	if ($self->score($w) >= 1) {
+	    my $round = int($w->[0]);
+	    push @desc, [ $round, $w->[1] ];
+	    $w->[0] -= $round;
+	    $v = $w;
+	    # (check remainder's percentage of original)
+	}
+    }
+
+    # TODO: Cut off the spreading when the smaller units contribute
+    # inconsequential amounts
+
+    return @desc;
+}
+
+sub range_score {
+    my ($self, $v) = @_;
+    my ($val, $unit) = @$v;
+    my $ranges = $self->get_ranges();
+    my $range = $ranges->{$unit} || $ranges->{default};
+    return 0 if $val < $range->[0];
+    return 1 if ! defined $range->[1];
+    return 0 if $val > $range->[1];
+    return 1;
+}
+
+sub pref_score {
+    my ($self, $unit) = @_;
+    my $prefs = $self->get_prefs();
+    return $prefs->{$unit} || $prefs->{default};
+}
+
 1;

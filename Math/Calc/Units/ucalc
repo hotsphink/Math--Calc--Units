@@ -5,6 +5,7 @@ use lib "$FindBin::Bin/..";
 #use Units::Calc;
 use Units::Calc::Convert qw(convert reduce);
 use Units::Calc qw(compute);
+use Units::Calc::Rank;
 
 sub assert ($$) {
     my ($test, $shouldBe) = @_;
@@ -17,6 +18,8 @@ sub assert ($$) {
 }
 
 use Data::Dumper;
+
+# print Dumper(Units::Calc::Rank::choose_juicy_ones([3600, 'sec']));
 
 my $v = [ 1, 'minute' ];
 my $w = convert($v, 'sec');

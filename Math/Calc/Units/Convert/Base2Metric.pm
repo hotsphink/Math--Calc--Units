@@ -2,7 +2,7 @@ package Units::Calc::Convert::Base2Metric;
 use base 'Units::Calc::Convert::Metric'; # Overrides
 use strict;
 
-use vars qw(%metric_base2 %abbrev $metric_prefix_test);
+use vars qw(%metric_base2 %abbrev $metric_prefix_test %pref);
 
 %metric_base2 = ( kilo => 2**10,
 		  mega => 2**20,
@@ -19,6 +19,15 @@ use vars qw(%metric_base2 %abbrev $metric_prefix_test);
 	    t => 'tera',
 	    p => 'peta',
 	    e => 'exa',
+);
+
+%pref = ( unit => 1.0,
+	  kilo => 0.8,
+	  mega => 0.8,
+	  giga => 0.8,
+	  tera => 0.7,
+	  peta => 0.6,
+	  exa => 0.3,
 );
 
 sub get_metric {
@@ -40,6 +49,11 @@ sub get_prefix {
     } else {
 	return;
     }
+}
+
+sub prefix_pref {
+    my ($self, $prefix) = @_;
+    return $pref{lc($prefix)} || $pref{unit};
 }
 
 # Unnecessary efficiency hack: don't bother checking both upper & lower case
