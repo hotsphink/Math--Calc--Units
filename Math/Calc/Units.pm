@@ -1,98 +1,89 @@
 package Units::Calc;
-use Units::Calc::Grammar;
-use Units::Calc::Convert;
-use base 'Exporter';
-use vars qw(@EXPORT_OK);
-@EXPORT_OK = qw(compute);
 
-use Data::Dumper;
+# Allow this module to be invoked directly from the command line.
+BEGIN {
+    if (!(caller(2))) {
+	eval 'use FindBin; use lib "$FindBin::Bin/..";';
+    }
+}
+
+use Units::Calc::Compute qw(compute);
+use Units::Calc::Rank qw(render choose_juicy_ones);
+use Units::Calc::Convert;
+
+use base 'Exporter';
+use vars qw($VERSION @EXPORT_OK);
+BEGIN {
+    $VERSION = '1.00';
+    @EXPORT_OK = qw(calc readable convert equal);
+}
 use strict;
 
-# Insert stuff into the grammar package so it can do immediate
-# calculations.
-package Units::Calc::Grammar;
-
-sub canonical {
-    return Units::Calc::Convert::reduce(shift());
+# calc : string -> string
+sub calc {
+    my $expr = shift;
+    my $v = compute($expr);
+    return render($v);
 }
 
-sub equivalent {
+# readable : string -> ( string )
+sub readable {
+    my ($expr, $verbose) = @_;
+    my $v = compute($expr);
+    return map { render($_) } choose_juicy_ones($v, $verbose);
+}
+
+# convert : string x string -> string
+sub convert {
+    my ($expr, $units) = @_;
+    my $v = compute($expr);
+    my $u = compute("# $units");
+    my $c = Units::Calc::Convert::convert($v, $u->[1]);
+    return render($c);
+}
+
+# equal : string x string -> boolean
+use constant EPSILON => 1e-12;
+sub equal {
     my ($u, $v) = @_;
-    return Units::Calc::Convert::Base->same($u, $v);
+    $u = compute($u);
+    $v = compute($v);
+    $v = Units::Calc::Convert::convert($v, $u->[1]);
+    $u = $u->[0];
+    $v = $v->[0];
+    return 1 if ($u == 0) && abs($v) < EPSILON;
+    return abs(($u-$v)/$u) < EPSILON;
 }
-
-# All these assume the values are in canonical units.
-sub plus {
-    my ($u, $v) = @_;
-    die "Added incompatible units ".render_unit($u->[1])." and ".render_unit($v->[1])
-      if ! equivalent($u->[1], $v->[1]);
-    return [ $u->[0] + $v->[0], $u->[1] ];
-}
-
-sub minus {
-    my ($u, $v) = @_;
-    die "Subtract incompatible units ".render_unit($u->[1])." and ".render_unit($v->[1])
-      if ! equivalent($u->[1], $v->[1]);
-    return [ $u->[0] - $v->[0], $u->[1] ];
-}
-
-sub mult {
-    my ($u, $v) = @_;
-    return canonical([ $u->[0] * $v->[0], dot($u->[1], $v->[1]) ]);
-}
-
-sub divide {
-    my ($u, $v) = @_;
-    return canonical([ $u->[0] / $v->[0], [ 'per', $u->[1], $v->[1] ]]);
-}
-
-sub power {
-    my ($u, $v) = @_;
-    die "Can only raise to unit-less powers" if $v->[1] ne 'unit';
-    return canonical([ $u->[0] ** $v->[0], [ 'dot', $u->[1], $v->[0] ] ]);
-}
-
-sub dot {
-    return 'unit' if @_ == 0;
-    return $_[0] if @_ == 1;
-    return [ 'dot', @_ ];
-}
-
-package Units::Calc;
-
-# Poor-man's tokenizer
-sub tokenize {
-    my $data = shift;
-    my @tokens = $data =~ m{\s*([\d.]+|\w+|\*\*|[-+*/()])}g;
-    my @types = map {      /\d/ ? 'NUMBER'
-                      :(   /\w/ ? 'WORD'
-                      :(          $_)) } @tokens;
-    return \@tokens, \@types;
-}
-
-# compute : string -> <value,unit>
-sub compute {
-    my ($vals, $types) = tokenize(shift());
-    my $lexer = sub {
-#        print "TOK($vals->[0]) TYPE($types->[0])\n" if @$vals;
-        return shift(@$types), shift(@$vals) if (@$types);
-        return ('', undef);
-    };
-
-    my $parser = new Units::Calc::Grammar;
-
-    return
-        $parser->YYParse(yylex => $lexer,
-                         yyerror => sub {
-                             my $parser = shift;
-                             die "Error: expected ".join(" ", $parser->YYExpect)." got `".$parser->YYCurtok."', rest=".join(" ", @$types)."\nfrom ".join(" ", @$vals)."\n";
-                         },
-                         yydebug => 0); # 0x1f);
-};
 
 if (!(caller)) {
-    eval 'use Data::Dumper';
-    print Dumper(compute(join('',@ARGV)));
+    my $verbose;
+    if ($ARGV[0] eq '-v') { shift; $verbose = 1; }
+    print "$_\n" foreach readable($ARGV[0], $verbose);
 }
+
+# Below is the stub of documentation for your module. You better edit it!
+
+=head1 NAME
+
+Units::Calc - Unit-aware calculator with adaptive output
+
+=head1 SYNOPSIS
+
+  use Units::Calc;
+  blah blah blah
+
+=head1 DESCRIPTION
+
+Does stuff.
+
+=head1 AUTHOR
+
+Steve Fink, sfink@cpan.org
+
+=head1 SEE ALSO
+
+ucalc(1), Math::Units, Convert::Units.
+
+=cut
 
 1;

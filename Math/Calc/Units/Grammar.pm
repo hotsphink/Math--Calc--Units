@@ -1,6 +1,6 @@
 ####################################################################
 #
-#    This file was generated using Parse::Yapp version 1.00.
+#    This file was generated using Parse::Yapp version 1.04.
 #
 #        Don't edit this file, use source file instead.
 #
@@ -25,7 +25,7 @@ use strict;
 #
 # This notice should remain unchanged.
 #
-# (c) Copyright 1998-1999 Francois Desarmenien, all rights reserved.
+# (c) Copyright 1998-2001 Francois Desarmenien, all rights reserved.
 # (see the pod text in Parse::Yapp module for use and distribution rights)
 #
 
@@ -37,7 +37,7 @@ use strict;
 
 use vars qw ( $VERSION $COMPATIBLE $FILENAME );
 
-$VERSION = '1.00';
+$VERSION = '1.04';
 $COMPATIBLE = '0.07';
 $FILENAME=__FILE__;
 
@@ -176,6 +176,11 @@ sub YYExpect {
     keys %{$self->{STATES}[$self->{STACK}[-1][0]]{ACTIONS}}
 }
 
+sub YYLexer {
+    my($self)=shift;
+
+	$$self{LEX};
+}
 
 
 #################
@@ -351,7 +356,6 @@ sub _Parse {
                         ?   map { $$_[1] } @$stack[ -$$dotpos .. -1 ]
                         :   ();
 
-
             $semval = $code ? &$code( $self, @sempar )
                             : @sempar ? $sempar[0] : undef;
 
@@ -395,6 +399,7 @@ sub _Parse {
 
 			    push(@$stack,
                      [ $$states[$$stack[-1][0]]{GOTOS}{$lhs}, $semval ]);
+                $$check='';
                 next;
             };
 
@@ -402,11 +407,17 @@ sub _Parse {
 #DBG>		and	print STDERR "Forced Error recovery.\n";
 
             $$check='';
+
         };
 
         #Error
             $$errstatus
         or   do {
+
+            $$errstatus = 1;
+            &$error($self);
+                $$errstatus # if 0, then YYErrok has been called
+            or  next;       # so continue parsing
 
 #DBG>			$debug & 0x10
 #DBG>		and	do {
@@ -415,7 +426,7 @@ sub _Parse {
 #DBG>		};
 
             ++$$nberror;
-            &$error($self);
+
         };
 
 			$$errstatus == 3	#The next token is not valid: discard it
@@ -478,6 +489,9 @@ sub _Parse {
 #End of include--------------------------------------------------
 
 
+#line 3 "Grammar.y"
+
+    use Units::Calc::Compute qw(plus minus mult divide power);
 
 
 sub new {
@@ -485,202 +499,235 @@ sub new {
         ref($class)
     and $class=ref($class);
 
-    my($self)=$class->SUPER::new( yyversion => '1.00',
+    my($self)=$class->SUPER::new( yyversion => '1.04',
                                   yystates =>
 [
 	{#State 0
 		ACTIONS => {
-			'NUMBER' => 2,
-			'WORD' => 3,
-			"(" => 5
+			'NUMBER' => 4,
+			"#" => 2,
+			"-" => 5,
+			'WORD' => 6,
+			"(" => 3
 		},
 		GOTOS => {
 			'unit' => 1,
-			'value' => 4,
-			'expr' => 6
-		}
-	},
-	{#State 1
-		DEFAULT => -10
-	},
-	{#State 2
-		ACTIONS => {
-			'WORD' => 3
-		},
-		DEFAULT => -11,
-		GOTOS => {
-			'unit' => 7
-		}
-	},
-	{#State 3
-		DEFAULT => -12
-	},
-	{#State 4
-		DEFAULT => -7
-	},
-	{#State 5
-		ACTIONS => {
-			'NUMBER' => 2,
-			'WORD' => 3,
-			"(" => 5
-		},
-		GOTOS => {
-			'unit' => 1,
-			'value' => 4,
+			'value' => 7,
+			'START' => 8,
 			'expr' => 9
 		}
 	},
-	{#State 6
+	{#State 1
+		DEFAULT => -12
+	},
+	{#State 2
 		ACTIONS => {
-			"*" => 13,
-			'' => 11,
-			"+" => 14,
-			"**" => 12,
-			"-" => 15,
-			'WORD' => 3,
-			"/" => 16
+			'WORD' => 6
 		},
 		GOTOS => {
 			'unit' => 10
 		}
+	},
+	{#State 3
+		ACTIONS => {
+			'NUMBER' => 4,
+			"-" => 5,
+			'WORD' => 6,
+			"(" => 3
+		},
+		GOTOS => {
+			'unit' => 1,
+			'value' => 7,
+			'expr' => 11
+		}
+	},
+	{#State 4
+		ACTIONS => {
+			'WORD' => 6
+		},
+		DEFAULT => -13,
+		GOTOS => {
+			'unit' => 12
+		}
+	},
+	{#State 5
+		ACTIONS => {
+			'NUMBER' => 13
+		}
+	},
+	{#State 6
+		DEFAULT => -15
 	},
 	{#State 7
 		DEFAULT => -9
 	},
 	{#State 8
-		DEFAULT => -13
+		ACTIONS => {
+			'' => 15
+		}
 	},
 	{#State 9
 		ACTIONS => {
-			"*" => 13,
-			"+" => 14,
-			"**" => 12,
-			"-" => 15,
-			'WORD' => 3,
-			"/" => 16,
-			")" => 17
+			"*" => 18,
+			"+" => 19,
+			"**" => 17,
+			"-" => 20,
+			'WORD' => 6,
+			"/" => 21
 		},
+		DEFAULT => -1,
 		GOTOS => {
-			'unit' => 10
+			'unit' => 16
 		}
 	},
 	{#State 10
-		DEFAULT => -8
+		DEFAULT => -2
 	},
 	{#State 11
-		DEFAULT => -0
+		ACTIONS => {
+			"*" => 18,
+			"+" => 19,
+			"**" => 17,
+			"-" => 20,
+			'WORD' => 6,
+			"/" => 21,
+			")" => 22
+		},
+		GOTOS => {
+			'unit' => 16
+		}
 	},
 	{#State 12
-		ACTIONS => {
-			'NUMBER' => 2,
-			'WORD' => 3,
-			"(" => 5
-		},
-		GOTOS => {
-			'unit' => 1,
-			'value' => 4,
-			'expr' => 18
-		}
+		DEFAULT => -11
 	},
 	{#State 13
-		ACTIONS => {
-			'NUMBER' => 2,
-			'WORD' => 3,
-			"(" => 5
-		},
-		GOTOS => {
-			'unit' => 1,
-			'value' => 4,
-			'expr' => 19
-		}
+		DEFAULT => -14
 	},
 	{#State 14
-		ACTIONS => {
-			'NUMBER' => 2,
-			'WORD' => 3,
-			"(" => 5
-		},
-		GOTOS => {
-			'unit' => 1,
-			'value' => 4,
-			'expr' => 20
-		}
+		DEFAULT => -16
 	},
 	{#State 15
-		ACTIONS => {
-			'NUMBER' => 2,
-			'WORD' => 3,
-			"(" => 5
-		},
-		GOTOS => {
-			'unit' => 1,
-			'value' => 4,
-			'expr' => 21
-		}
+		DEFAULT => -0
 	},
 	{#State 16
+		DEFAULT => -10
+	},
+	{#State 17
 		ACTIONS => {
-			'NUMBER' => 2,
-			'WORD' => 3,
-			"(" => 5
+			'NUMBER' => 4,
+			"-" => 5,
+			'WORD' => 6,
+			"(" => 3
 		},
 		GOTOS => {
 			'unit' => 1,
-			'value' => 4,
-			'expr' => 22
+			'value' => 7,
+			'expr' => 23
 		}
 	},
-	{#State 17
-		DEFAULT => -6
-	},
 	{#State 18
-		DEFAULT => -5,
+		ACTIONS => {
+			'NUMBER' => 4,
+			"-" => 5,
+			'WORD' => 6,
+			"(" => 3
+		},
 		GOTOS => {
-			'unit' => 10
+			'unit' => 1,
+			'value' => 7,
+			'expr' => 24
 		}
 	},
 	{#State 19
 		ACTIONS => {
-			"**" => 12,
-			'WORD' => 3
+			'NUMBER' => 4,
+			"-" => 5,
+			'WORD' => 6,
+			"(" => 3
 		},
-		DEFAULT => -3,
 		GOTOS => {
-			'unit' => 10
+			'unit' => 1,
+			'value' => 7,
+			'expr' => 25
 		}
 	},
 	{#State 20
 		ACTIONS => {
-			"**" => 12,
-			"*" => 13,
-			'WORD' => 3,
-			"/" => 16
+			'NUMBER' => 4,
+			"-" => 5,
+			'WORD' => 6,
+			"(" => 3
 		},
-		DEFAULT => -1,
 		GOTOS => {
-			'unit' => 10
+			'unit' => 1,
+			'value' => 7,
+			'expr' => 26
 		}
 	},
 	{#State 21
 		ACTIONS => {
-			"**" => 12,
-			"*" => 13,
-			'WORD' => 3,
-			"/" => 16
+			'NUMBER' => 4,
+			"-" => 5,
+			'WORD' => 6,
+			"(" => 3
 		},
-		DEFAULT => -2,
 		GOTOS => {
-			'unit' => 10
+			'unit' => 1,
+			'value' => 7,
+			'expr' => 27
 		}
 	},
 	{#State 22
+		DEFAULT => -8
+	},
+	{#State 23
+		DEFAULT => -7,
+		GOTOS => {
+			'unit' => 16
+		}
+	},
+	{#State 24
 		ACTIONS => {
-			"**" => 12,
-			'WORD' => 3
+			"**" => 17,
+			'WORD' => 6
+		},
+		DEFAULT => -5,
+		GOTOS => {
+			'unit' => 16
+		}
+	},
+	{#State 25
+		ACTIONS => {
+			"**" => 17,
+			"*" => 18,
+			'WORD' => 6,
+			"/" => 21
+		},
+		DEFAULT => -3,
+		GOTOS => {
+			'unit' => 16
+		}
+	},
+	{#State 26
+		ACTIONS => {
+			"**" => 17,
+			"*" => 18,
+			'WORD' => 6,
+			"/" => 21
 		},
 		DEFAULT => -4,
 		GOTOS => {
-			'unit' => 10
+			'unit' => 16
+		}
+	},
+	{#State 27
+		ACTIONS => {
+			"**" => 17,
+			'WORD' => 6
+		},
+		DEFAULT => -6,
+		GOTOS => {
+			'unit' => 16
 		}
 	}
 ],
@@ -690,86 +737,101 @@ sub new {
 		 '$start', 2, undef
 	],
 	[#Rule 1
-		 'expr', 3,
-sub
-#line 13 "Grammar.y"
-{ return plus($_[1], $_[3]); }
+		 'START', 1, undef
 	],
 	[#Rule 2
-		 'expr', 3,
-sub
-#line 14 "Grammar.y"
-{ return minus($_[1], $_[3]); }
+		 'START', 2, undef
 	],
 	[#Rule 3
 		 'expr', 3,
 sub
-#line 15 "Grammar.y"
-{ return mult($_[1], $_[3]); }
+#line 22 "Grammar.y"
+{ return plus($_[1], $_[3]); }
 	],
 	[#Rule 4
 		 'expr', 3,
 sub
-#line 16 "Grammar.y"
-{ return divide($_[1], $_[3]); }
+#line 23 "Grammar.y"
+{ return minus($_[1], $_[3]); }
 	],
 	[#Rule 5
 		 'expr', 3,
 sub
-#line 17 "Grammar.y"
-{ return power($_[1], $_[3]); }
+#line 24 "Grammar.y"
+{ return mult($_[1], $_[3]); }
 	],
 	[#Rule 6
 		 'expr', 3,
 sub
-#line 18 "Grammar.y"
-{ return $_[2]; }
+#line 25 "Grammar.y"
+{ return divide($_[1], $_[3]); }
 	],
 	[#Rule 7
-		 'expr', 1,
-sub
-#line 19 "Grammar.y"
-{ return canonical($_[1]); }
-	],
-	[#Rule 8
-		 'expr', 2,
-sub
-#line 20 "Grammar.y"
-{ return mult($_[1], [ 1, $_[2] ]); }
-	],
-	[#Rule 9
-		 'value', 2,
-sub
-#line 24 "Grammar.y"
-{ return [ $_[1], $_[2] ] }
-	],
-	[#Rule 10
-		 'value', 1,
+		 'expr', 3,
 sub
 #line 26 "Grammar.y"
-{ return [ 1, $_[1] ] }
+{ return power($_[1], $_[3]); }
 	],
-	[#Rule 11
-		 'value', 1,
+	[#Rule 8
+		 'expr', 3,
 sub
 #line 27 "Grammar.y"
-{ return [ $_[1], 'unit' ] }
+{ return $_[2]; }
+	],
+	[#Rule 9
+		 'expr', 1,
+sub
+#line 28 "Grammar.y"
+{ return $_[1]; }
+	],
+	[#Rule 10
+		 'expr', 2,
+sub
+#line 29 "Grammar.y"
+{ return mult($_[1], [ 1, $_[2] ]); }
+	],
+	[#Rule 11
+		 'value', 2,
+sub
+#line 33 "Grammar.y"
+{ return [ $_[1], $_[2] ] }
 	],
 	[#Rule 12
-		 'unit', 1, undef
+		 'value', 1,
+sub
+#line 35 "Grammar.y"
+{ return [ 1, $_[1] ] }
 	],
 	[#Rule 13
+		 'value', 1,
+sub
+#line 36 "Grammar.y"
+{ return [ $_[1], {} ] }
+	],
+	[#Rule 14
+		 'value', 2,
+sub
+#line 37 "Grammar.y"
+{ return [ -$_[2], {} ] }
+	],
+	[#Rule 15
+		 'unit', 1,
+sub
+#line 40 "Grammar.y"
+{ return { $_[1] => 1 } }
+	],
+	[#Rule 16
 		 'unit', 2,
 sub
-#line 31 "Grammar.y"
-{ return [ 'dot', $_[1], $_[2] ]; }
+#line 41 "Grammar.y"
+{ my $u = {}; $u->{$_[1]}++; $u->{$_[2]}++; return $u; }
 	]
 ],
                                   @_);
     bless($self,$class);
 }
 
-#line 34 "Grammar.y"
+#line 44 "Grammar.y"
 
 
 1;

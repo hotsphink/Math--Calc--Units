@@ -1,90 +1,123 @@
 package Units::Calc::Convert::Multi;
+use base 'Exporter';
+use vars qw(@EXPORT_OK);
+BEGIN {
+    @EXPORT_OK = qw(to_canonical simple_convert singular
+		    variants major_variants
+		    major_pref range_score pref_score
+		    get_class);
+};
 require Units::Calc::Convert::Time;
 require Units::Calc::Convert::Byte;
 require Units::Calc::Convert::Combo;
 use strict;
-use vars qw(%units %metric_units %prefixable_metric_units %total_unit_map);
 use vars qw(@UnitClasses);
 
 @UnitClasses = qw(Units::Calc::Convert::Time
 		  Units::Calc::Convert::Byte
 		  Units::Calc::Convert::Combo);
 
-sub unit_map {
-    my ($self) = @_;
-    if (keys %total_unit_map == 0) {
-	%total_unit_map = (%{$self->SUPER::unit_map()},
-			   %units,
-			   %metric_units,
-			   %prefixable_metric_units);
-    }
-    return \%total_unit_map;
-}
-
-# sub canonical_unit { return; }
-
 # to_canonical : unit -> value
 #
-# This depends on only having canonical units as keys for the three hashes.
 sub to_canonical {
-    my ($self, $unit) = @_;
+    my ($unit) = @_;
 
-    # CACHE!!
+    my $val = 1;
+    my %newUnit;
 
-    if (ref $unit) {
-	my @terms = map { $self->to_canonical($_, 1) } @$unit[1..$#$unit];
-	# THESE ONLY HANDLE SIMPLE UNITS!!!
-	# This whole thing is a nasty hack. Yuckth.
-	if ($unit->[0] eq 'dot') {
-	    my $prod = 1;
-	    $prod *= $_->[0] foreach (@terms);
-	    return [ $prod, [ 'dot', map { $_->[1] } @terms ] ];
+    while (my ($unitName, $power) = each %$unit) {
+	my ($mult, $canon) = name_to_canonical($unitName);
+	$val *= $mult ** $power;
+
+	if (ref $canon) {
+	    # Uh oh, it was a combination of basic types
+	    my $c = to_canonical($canon);
+	    $val *= $c->[0] ** $power;
+	    while (my ($name, $subPower) = each %{ $c->[1] }) {
+		if (($newUnit{$name} += $subPower * $power) == 0) {
+		    delete $newUnit{$name};
+		}
+	    }
 	} else {
-	    return [ $terms[0]->[0] / $terms[1]->[0],
-		     $terms[0]->[1], $terms[1]->[1] ];
+	    if (($newUnit{$canon} += $power) == 0) {
+		delete $newUnit{$canon};
+	    }
 	}
-    } else {
-	foreach my $uclass (@UnitClasses) {
-	    my $c;
-	    return $c if $c = $uclass->to_canonical($_);
-	}
-	return [ 1, $unit ]; # Default to user-defined???
     }
+
+    return [ $val, \%newUnit ];
 }
 
-sub get_class {
-    my ($self, $unit) = @_;
-    my $canon = Units::Calc::Convert::to_canonical($unit);
-    foreach my $uclass (@UnitClasses) {
-	return $uclass if $uclass->canonical_unit() eq $canon->[1];
+# name_to_canonical : unitName -> value x baseUnit
+#
+sub name_to_canonical {
+    my ($unitName) = @_;
+    
+    # First, check for compound units
+    if (my $v = Units::Calc::Convert::Combo->lookup_compound($unitName)) {
+	return @$v;
     }
+
+    foreach my $uclass (@UnitClasses) {
+	if (my ($val, $base) = $uclass->to_canonical($unitName)) {
+	    return ($val, $base);
+	}
+    }
+    return Units::Calc::Convert::Base->to_canonical($unitName);
+}
+
+# get_class : unitName -> "Units::Calc::Convert::<unitClass>"
+#
+sub get_class {
+    my ($unitName) = @_;
+    my (undef, $canon) = name_to_canonical($unitName);
+    foreach my $uclass (@UnitClasses) {
+	my $canon_unit = $uclass->canonical_unit();
+	next if ! defined $canon_unit;
+	return $uclass if $canon_unit eq $canon;
+    }
+    return 'Units::Calc::Convert::Base';
+}
+
+sub simple_convert {
+    my ($u, $v) = @_;
+    foreach my $uclass (@UnitClasses) {
+	my $c;
+	return $c if $c = $uclass->simple_convert($u, $v);
+    }
+    return;
+}
+
+sub singular {
+    my ($unitName) = @_;
+    return get_class($unitName)->singular($unitName);
 }
 
 sub variants {
-    my ($self, $base) = @_;
-    return $self->get_class($base)->variants($base);
+    my ($base) = @_;
+    return get_class($base)->variants($base);
 }
 
 sub major_variants {
-    my ($self, $base) = @_;
-    return $self->get_class($base)->major_variants($base);
+    my ($base) = @_;
+    return get_class($base)->major_variants($base);
 }
 
 sub major_pref {
-    my ($self, $base) = @_;
-    return $self->get_class($base)->major_pref($base);
+    my ($base) = @_;
+    return get_class($base)->major_pref($base);
 }
 
 sub range_score {
-    my ($self, $v) = @_;
-    die unless ! ref $v->[1];
-    return $self->get_class($v->[1])->range_score($v);
+    my ($val, $unitName) = @_;
+    die if ref $unitName;
+    return get_class($unitName)->range_score($val, $unitName);
 }
 
 sub pref_score {
-    my ($self, $unit) = @_;
-    die unless ! ref $unit;
-    return $self->get_class($unit)->pref_score($unit);
+    my ($unitName) = @_;
+    die if ref $unitName;
+    return get_class($unitName)->pref_score($unitName);
 }
 
 1;

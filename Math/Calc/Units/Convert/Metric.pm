@@ -56,10 +56,10 @@ use vars qw(%niceSmallMetric %metric %pref %abbrev $metric_prefix_test);
 # this class. All other methods can be used unchanged in subclasses.
 
 sub pref_score {
-    my ($self, $unit) = @_;
-    my $prefix = $self->get_prefix($unit);
-    $unit = substr($unit, length($prefix || ""));
-    return $self->prefix_pref($prefix) * $self->SUPER::pref_score($unit);
+    my ($self, $unitName) = @_;
+    my $prefix = $self->get_prefix($unitName);
+    $unitName = substr($unitName, length($prefix || ""));
+    return $self->prefix_pref($prefix) * $self->SUPER::pref_score($unitName);
 }
 
 sub get_metric {
@@ -112,7 +112,7 @@ sub prefix_pref {
     return $pref{lc($prefix)} || $pref{unit};
 }
 
-# demetric : string => [ mult, base ]
+# demetric : string => mult x base
 #
 # (pronounced de-metric, not demmetric or deme trick)
 #
@@ -120,9 +120,9 @@ sub demetric {
     my ($self, $string) = @_;
     if (my $prefix = $self->get_prefix($string)) {
 	my $base = substr($string, length($prefix));
-	return [ $self->get_metric($prefix), $base ];
+	return ($self->get_metric($prefix), $base);
     } else {
-	return [ 1, $string ];
+	return (1, $string);
     }
 }
 
@@ -140,29 +140,29 @@ sub expand {
     return @expansions;
 }
 
-# convert : value x unit -> value
+# simple_convert : unitName x unitName -> multiple:number
 #
 # A little weird, because it allows centimegamilliwatts
 #
 # Example:
-# 4 megadouble -> 8e9 millisingle
-# v is [ 4, megadouble ]
-# conv_from is [ 1_000_000, double ]
-# conv_to is [ .001, single ]
-# w is [ 2_000_000, single ]
-# return [ 4 * 2_000_000 / .001, millisingle ]
+# megadouble -> millisingle
+#
+# (mult_from, base_from) is (1_000_000, double)
+# (mult_to, base_to) is (.001, single)
+# submult is 2 (from converting double -> single)
+#
+# return submult * (mult_from / mult_to) = 2_000_000_000
 #
 sub simple_convert {
-    my ($self, $v, $unit) = @_;
-    my ($val, $from) = @$v;
+    my ($self, $from, $to) = @_;
 
-    my $conv_from = $self->demetric($from) or return;
-    my $conv_to = $self->demetric($unit) or return;
+    my ($mult_from, $base_from) = $self->demetric($from) or return;
+    my ($mult_to, $base_to) = $self->demetric($to) or return;
 
-    my $w = $self->SUPER::simple_convert($conv_from, $conv_to->[1]);
-    return if ! $w; # Failed
+    my $submult = $self->SUPER::simple_convert($base_from, $base_to);
+    return if ! defined $submult;
 
-    return [ $val * $w->[0] / $conv_to->[0], $unit ];
+    return $submult * ($mult_from / $mult_to);
 }
 
 1;

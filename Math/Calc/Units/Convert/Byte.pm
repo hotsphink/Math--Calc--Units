@@ -34,34 +34,26 @@ sub unit_map {
 
 sub canonical_unit { return 'byte'; }
 
+# simple_convert : unitName x unitName -> multiplier
+#
 sub simple_convert {
-    my ($self, $v, $unit) = @_;
-    my ($val, $from) = @$v;
+    my ($self, $from, $to) = @_;
 
     # 'b', 'byte', or 'bytes'
-    return [ $val, 'byte' ] if $from =~ /^b(yte(s?))?$/i;
+    return 1 if $from =~ /^b(yte(s?))?$/i;
 
-    if (my $easy = $self->SUPER::simple_convert($v, $unit)) {
+    if (my $easy = $self->SUPER::simple_convert($from, $to)) {
 	return $easy;
     }
 
     # mb == megabyte
     if ($from =~ /^(.)b(yte(s?))?$/i) {
 	if (my $prefix = $self->expand($1)) {
-	    return $self->simple_convert([ $val, $prefix . "byte" ], $unit);
+	    return $self->simple_convert($prefix . "byte", $to);
 	}
     }
 
     return; # Failed
-}
-
-sub describe {
-    my $self = shift;
-    my $v = shift;
-    die "Huh? Can only do seconds!" if $v->[1] ne 'sec';
-    my @spread = $self->spread($v, 'week', 'day', 'hour', 'minute', 'sec',
-			       'ms', 'ns');
-    return (\@spread, $v); # Hmm... what type am I returning??
 }
 
 1;

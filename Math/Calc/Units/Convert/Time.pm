@@ -7,14 +7,13 @@ use vars qw(%units %pref %ranges %total_unit_map);
 	   hour => [ 60, 'minute' ],
 	   day => [ 24, 'hour' ],
 	   week => [ 7, 'day' ],
-	   min => [ 1, 'minute' ],
 );
 
 %pref = ( default => 1,
-	  hour => 1.2,
-	  day => 1.1,
+	  hour => 0.8,
+	  day => 0.8,
 	  week => 0.4,
-	  minute => 1.1,
+	  minute => 0.9,
 );
 
 %ranges = ( default => [ 1, 300 ],
@@ -38,7 +37,7 @@ sub major_variants {
 # Return a list of the variants of the canonical unit of time: 'sec'
 sub variants {
     my ($self, $base) = @_;
-    return (keys %units), map { "${_}sec" } $self->get_prefixes();
+    return 'sec', (keys %units), map { "${_}sec" } $self->get_prefixes();
 }
 
 sub unit_map {
@@ -60,26 +59,26 @@ sub demetric {
     if (my $prefix = $self->get_prefix($string)) {
 	my $tail = substr($string, length($prefix));
 	if ($tail =~ /^sec(ond)?s?$/) {
-	    return [ $self->get_metric($prefix), $tail ];
+	    return ($self->get_metric($prefix), $tail);
 	}
 	return; # Should this fail, or assume it's a non-metric unit?
     } else {
-	return [ 1, $string ];
+	return (1, $string);
     }
 }
 
-# simple_convert : value x unit -> value
+# simple_convert : unitName x unitName -> multiplier
 #
 # Does not allow msec (only millisec or ms)
 #
 sub simple_convert {
-    my ($self, $v, $unit) = @_;
-    my $from = $v->[1];
+    my ($self, $from, $to) = @_;
 
     # sec, secs, second, seconds
-    return [ $v->[0], 'sec' ] if $from =~ /^sec(ond)?s?$/i;
+    $from = "sec" if $from =~ /^sec(ond)?s?$/i;
+    $from = "minute" if $from =~ /^min(ute)?s?$/i;
 
-    if (my $easy = $self->SUPER::simple_convert($v, $unit)) {
+    if (my $easy = $self->SUPER::simple_convert($from, $to)) {
 	return $easy;
     }
 
@@ -87,9 +86,12 @@ sub simple_convert {
     if ($from =~ /^(.)s$/) {
 	my @expansions = $self->expand($1);
 	# Only use prefixes smaller than one, and pick the first
-	my ($expansion) = grep { ($self->demetric($from))[0] < 1 } @expansions;
-	if ($expansion) {
-	    return $self->simple_convert($v, $expansion . "sec");
+	foreach my $expansion ($self->expand($1)) {
+	    my $full = $expansion . "sec";
+	    my ($mult, $base) = $self->demetric($full);
+	    if ($mult < 1) {
+		return $self->simple_convert($full, $to);
+	    }
 	}
     }
 

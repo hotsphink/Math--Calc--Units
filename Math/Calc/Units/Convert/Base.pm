@@ -1,14 +1,6 @@
 package Units::Calc::Convert::Base;
 use strict;
 
-sub import {
-    my $pkg = shift;
-    my %actions = @_;
-    if (my $sub = $actions{register}) {
-	$sub->($pkg);
-    }
-}
-
 sub major_pref {
     return 0;
 }
@@ -17,8 +9,17 @@ sub major_variants {
     return ();
 }
 
+# singular : unitName -> unitName
+#
 sub singular {
-    return; # Could not handle specially
+    my $self = shift;
+    local $_ = shift;
+
+    return $_ unless /s$/;
+    return $1 if /^(.*[^e])s/;  # doesn't end in es => just chop off the s
+    return $1 if /^(.*ch)es/;   # eg inches -> inch
+    return $1 if /^(.*[aeiou][^aeiou]e)s/; # scales -> scale
+    chop; return $_; # Chop off the s
 }
 
 sub unit_map {
@@ -31,57 +32,63 @@ sub variants {
     return ($base, keys %$map);
 }
 
+# unit x unit -> boolean
 sub same {
     my ($self, $u, $v) = @_;
-    if (ref $u) {
-	return if ! ref $v;
-	return if $u->[0] ne $v->[0];
-	return if @$u != @$v;
-	for my $i (1..$#$u) {
-	    return if ! $self->same($u->[$i], $v->[$i]);
-	}
-	return 1;
-    } else {
-	return $u eq $v;
+    return 0 if keys %$u != keys %$v;
+    while (my ($name, $power) = each %$u) {
+	return 0 if $v->{$name} != $power;
     }
+    return 1;
 }
 
-# simple_convert : value x unit -> value
+# simple_convert : unitName x unitName -> multiple:number
 #
-# Only handles nonreference units
+# Second unit name must be canonical.
 #
 sub simple_convert {
-    my ($self, $v, $unit) = @_;
+    my ($self, $from, $to) = @_;
+    return 1 if $from eq $to;
 
-    my ($val, $from) = @$v;
-    return $v if $from eq $unit;
-
-    die if ref $from;
-    $DB::single = 1, die if ref $unit;
+    {
+	my $canon_unit = $self->canonical_unit();
+	$DB::single = 1 if $canon_unit && $to ne $canon_unit;
+    }
 
     my $map = $self->unit_map();
     my $w = $map->{$from} || $map->{lc($from)};
     if (! $w) {
-	$from = Units::Calc::Convert::singular($from);
+	$from = $self->singular($from);
 	$w = $map->{$from} || $map->{lc($from)};
     }
     return if ! $w; # Failed
 
-    $w = [ $w->[0] * $val, $w->[1] ];
-
     # We might have only gotten one step closer (hour -> minute -> sec)
-    if ($self->same($w->[1], $unit)) {
-	return $w;
+    if ($w->[1] ne $to) {
+	my $submult = $self->simple_convert($w->[1], $to);
+	return if ! defined $submult;
+	return $w->[0] * $submult;
     } else {
-	return $self->simple_convert($w, $unit);
+	return $w->[0];
     }
 }
 
-# to_canonical : unit -> value
+# to_canonical : unitName -> amount x unitName
+#
 sub to_canonical {
-    my ($self, $unit) = @_;
+    my ($self, $unitName) = @_;
     my $canon = $self->canonical_unit();
-    return $self->simple_convert([ 1, $unit ], $canon);
+    if ($canon) {
+	my $mult = $self->simple_convert($unitName, $canon);
+	return if ! defined $mult;
+	return ($mult, $canon);
+    } else {
+	return (1, $self->singular($unitName));
+    }
+}
+
+sub canonical_unit {
+    return;
 }
 
 #################### RANKING, SCORING, DISPLAYING ##################
@@ -112,21 +119,32 @@ sub spread {
     return @desc;
 }
 
+# range_score : amount x unitName -> score
+#
 sub range_score {
-    my ($self, $v) = @_;
-    my ($val, $unit) = @$v;
+    my ($self, $val, $unitName) = @_;
     my $ranges = $self->get_ranges();
-    my $range = $ranges->{$unit} || $ranges->{default};
+    my $range = $ranges->{$unitName} || $ranges->{default};
     return 0 if $val < $range->[0];
     return 1 if ! defined $range->[1];
     return 0 if $val > $range->[1];
     return 1;
 }
 
+# pref_score : unitName -> score
+#
 sub pref_score {
-    my ($self, $unit) = @_;
+    my ($self, $unitName) = @_;
     my $prefs = $self->get_prefs();
-    return $prefs->{$unit} || $prefs->{default};
+    return $prefs->{$unitName} || $prefs->{default};
+}
+
+sub get_prefs {
+    return { default => 0.1 };
+}
+
+sub get_ranges {
+    return { default => [ 1, undef ] };
 }
 
 1;

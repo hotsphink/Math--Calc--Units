@@ -10,8 +10,7 @@ use vars qw(%ranges %pref);
 %metric_units = (
 );
 
-%prefixable_metric_units = ( bps => [ 1, [ 'per', 'bit', 'sec' ] ],
-);
+%prefixable_metric_units = ( bps => [ 1, { bit => 1, sec => -1 } ] );
 
 %ranges = ( default => [ 1, 999 ] );
 
@@ -37,42 +36,39 @@ sub singular {
     return $unit;
 }
 
-# demetric : string => [ mult, base ]
+# demetric : string => mult x base
 #
 sub demetric {
     my ($self, $string) = @_;
     if (my $prefix = $self->get_prefix($string)) {
 	my $tail = lc($self->singular(substr($string, length($prefix))));
 	if ($metric_units{$tail}) {
-	    return [ $self->get_metric($prefix), $tail ];
+	    return ($self->get_metric($prefix), $tail);
 	}
     } elsif (my $abbrev = $self->get_abbrev_prefix($string)) {
 	my $tail = lc($self->singular(substr($string, length($abbrev))));
 	if ($prefixable_metric_units{$tail}) {
 	    my $prefix = $self->get_abbrev($abbrev);
-	    return [ $self->get_metric($prefix), $tail ];
+	    return ($self->get_metric($prefix), $tail);
 	}
     }
 
-    return [ 1, $string ];
+    return (1, $string);
 }
 
-# to_canonical : unit -> value
+# to_canonical : unitName -> amount x unitName
 #
-# This depends on only having canonical units as keys for the three hashes.
-sub to_canonical {
-    my ($self, $unit) = @_;
+sub to_canonical { return; }
+
+sub lookup_compound {
+    my ($self, $unitName) = @_;
 
     foreach (keys %units, keys %metric_units, keys %prefixable_metric_units) {
-	if (my $c = $self->simple_convert([ 1, $unit ], $_)) {
+	if (my $mult = $self->simple_convert($unitName, $_)) {
 	    my $u = $units{$_}
-	         || $metric_units{$_}
-	         || $prefixable_metric_units{$_};
-	    $u = [ $u->[0] * $c->[0], $u->[1] ];
-	    return $u if not ref $u->[1];
-	    my ($val, $unit) = @$u;
-	    $c = Units::Calc::Convert::Multi->to_canonical($unit);
-	    return [ $c->[0] * $val, $c->[1] ];
+	            || $metric_units{$_}
+	            || $prefixable_metric_units{$_};
+	    return [ $mult * $u->[0], $u->[1] ];
 	}
     }
 

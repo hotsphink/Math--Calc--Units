@@ -1,10 +1,10 @@
 package Units::Calc::Rank;
 use base 'Exporter';
 use vars qw(@EXPORT_OK);
-BEGIN { @EXPORT_OK = qw(choose_juicy_ones render); }
+BEGIN { @EXPORT_OK = qw(choose_juicy_ones render render_unit); }
 
-use Units::Calc::Convert qw(convert canonical find_top);
-use Units::Calc::Convert::Multi;
+use Units::Calc::Convert qw(convert canonical);
+use Units::Calc::Convert::Multi qw(variants major_variants major_pref pref_score range_score get_class);
 use strict;
 
 sub display_printable {
@@ -17,93 +17,56 @@ sub display_printable {
     }
 }
 
-sub variants {
-    my $base = shift;
-    return Units::Calc::Convert::Multi->variants($base);
-}
-
-sub major_variants {
-    my $base = shift;
-    return Units::Calc::Convert::Multi->major_variants($base);
-}
-
-sub major_pref {
-    my $unit = shift;
-    return Units::Calc::Convert::Multi->major_pref($unit);
-}
-
-sub to_powerform {
-    my $unit = shift;
-    my @top = find_top($unit);
-    my @bottom = find_top($unit, 'invert');
-    my %count;
-    $count{$_}++ for (@top);
-    $count{$_}-- for (@bottom);
-    delete $count{unit};
-
-    return \%count;
-}
-
-# Powerform: { unit => count }
-sub from_powerform {
-    my $power = shift;
-    my @top;
-    my @bottom;
-    while (my ($type, $power) = each %$power) {
-	if ($power > 0) {
-	    push @top, ($type) x $power;
-	} elsif ($power < 0) {
-	    push @bottom, ($type) x -$power;
-	}
-    }
-
-    return Units::Calc::Convert::_canonical_reciprocal(\@top, \@bottom);
-}
-
 # choose_juicy_ones : value -> ( value )
 #
 sub choose_juicy_ones {
-    my ($v) = @_;
-    my @variants = rank_variants($v); # ( < {old=>new}, score > )
+    my ($v, $verbose) = @_;
+    my @variants = rank_variants($v, 0, $verbose); # ( < {old=>new}, score > )
     my %variants; # To remove duplicates: { id => [ {old=>new}, score ] }
     for my $variant (@variants) {
 	my $id = join(";;", values %{ $variant->[0] });
 	$variants{$id} = $variant;
     }
 
-    my $power = to_powerform($v->[1]);
-
     my @juicy;
 
     for my $variant (values %variants) {
 	my ($map, $score) = @$variant;
 	my %copy;
-	while (my ($unit, $count) = each %$power) {
+	while (my ($unit, $count) = each %{ $v->[1] }) {
 	    $copy{$map->{$unit}} = $count;
 	}
-	push @juicy, [ $score, convert($v, from_powerform(\%copy)) ];
+	push @juicy, [ $score, convert($v, \%copy) ];
     }
 
     return map { $_->[1] } sort { $b->[0] <=> $a->[0] } @juicy;
 }
 
 # rank_variants : <amount,unit> -> ( < map, score > )
-# where map : [original unit => new unit]
+# where map : {original unit => new unit}
 #
 sub rank_variants {
-    my ($v, $keepall) = @_;
+    my ($v, $keepall, $verbose) = @_;
 
     # I. Convert to canonical form
     $v = canonical($v);
 
     # II. Reduce unit down to the atomic component units and their powers
     # eg mb / sec / sec -> <mb,1>, <sec,-2>
-    my $count = to_powerform($v->[1]);
+    my ($mag, $count) = @$v;
 
-    my @top = grep { $count->{$_} > 0 } keys %$count;
+    my @rangeable = grep { $count->{$_} > 0 } keys %$count;
+    if (@rangeable == 0) {
+	@rangeable = keys %$count;
+    }
 
-    $DB::single = 1;
-    return rank_power_variants($v->[0], \@top, $count, $keepall);
+    return rank_power_variants($mag, \@rangeable, $count, $keepall, $verbose);
+}
+
+sub choose_major {
+    my (@possibilities) = @_;
+    my @majors = map { [ major_pref($_), $_ ] } @possibilities;
+    return (sort { $a->[0] <=> $b->[0] } @majors)[-1]->[1];
 }
 
 # rank_power_variants : value x [unit] x {unit=>power} x keepall_flag ->
@@ -112,13 +75,17 @@ sub rank_variants {
 # $top is the set of units that should be range checked.
 #
 sub rank_power_variants {
-    my ($val, $top, $power, $keepall) = @_;
+    my ($mag, $top, $power, $keepall, $verbose) = @_;
+
+    # Recursive case: we have multiple units left, so pick one to be
+    # the "major" unit and select the best combination of the other
+    # units for each major variant on the major unit.
 
     if (keys %$power > 1) {
 	# Choose the major unit class (this will return the best
 	# result for each of the major variants)
-	my @majors = map { [ major_pref($_), $_ ] } keys %$power;
-	my $major = (sort { $a->[0] <=> $b->[0] } @majors)[-1]->[1];
+	my $major = choose_major(keys %$power);
+	my $majorClass = get_class($major);
 
 	my %powerless = %$power;
 	delete $powerless{$major};
@@ -127,18 +94,20 @@ sub rank_power_variants {
 
 	# Try every combination of each major variant and the other units
 	foreach my $variant (major_variants($major)) {
-	    my $c = convert([ 1, $major ], $variant);
-	    my $cval = $val * $c->[0] ** $power->{$major};
+	    my $mult = $majorClass->simple_convert($variant, $major);
+	    my $cval = $mag / $mult ** $power->{$major};
 
-	    print "\n --- for $variant ---\n";
-	    my @r = rank_power_variants($cval, $top, \%powerless, 0);
-	    if (@r == 0) {
-		@r = rank_power_variants($cval, $top, \%powerless, 1);
-	    }
+	    print "\n --- for $variant ---\n" if $verbose;
+	    my @r = rank_power_variants($cval, $top, \%powerless, $keepall, $verbose);
+	    next if @r == 0;
 
 	    my $best = $r[0];
 	    $best->[0]->{$major} = $variant;
 	    push @ranked, $best;
+	}
+
+	if (@ranked == 0) {
+	    return rank_power_variants($mag, $top, $power, 1, $verbose);
 	}
 
 	# Update scores to reflect preferences
@@ -146,23 +115,34 @@ sub rank_power_variants {
 	return @ranked;
     }
 
-    # Have a single unit left. Go through all possible variants of that unit.
+    # Base case: have a single unit left. Go through all possible
+    # variants of that unit.
+
+    if (keys %$power == 0) {
+	# Special case: we don't have any units at all
+	return [ {}, 'unit' ];
+    }
+
     my $unit = (keys %$power)[0];
     $power = $power->{$unit}; # Now it's just the power of this unit
+    my $class = get_class($unit);
+    my (undef, $canon) = $class->to_canonical($unit);
+    my $mult = $class->simple_convert($unit, $canon);
+    $mag *= $mult ** $power;
 
-    my $old = $unit;
     my @choices;
-    foreach my $variant (variants($unit)) {
+    foreach my $variant (variants($canon)) {
 	# Convert from $old to $variant
 	# Input: 4 / ms
 	# 1 ms -> 1000 us
 	# 4 * 1000 ** -1 = .04 / us
-	my $c = convert([ 1, $old ], $variant);
-	$val *= $c->[0] ** $power;
-	$old = $variant;
+	my $mult = $class->simple_convert($variant, $canon);
+	$DB::single = 1 if not $mult;
+	my $minimag = $mag / $mult ** $power;
 
-	my $score = score($val, $variant, $top);
-	print "Variant($unit)=$val $variant score=$score\n";
+	my $score = score($minimag, $variant, $top);
+	print "($mag $unit) score $score:\t $minimag $variant\n"
+	    if $verbose;
 	next if (! $keepall) && ($score == 0);
 	push @choices, [ $score, $variant ];
     }
@@ -176,47 +156,56 @@ sub rank_power_variants {
 
 sub render_unit {
     my $u = shift;
-    if ($u eq 'unit') {
-	return "";
-    } elsif (! ref $u) {
-	return $u;
-    } elsif ($u->[0] eq 'dot') {
-	my @list = @$u;
-	shift(@list);
-	my %count;
-	$count{$_}++ foreach (@list);
-	my $str;
-	for my $unit (sort keys %count) {
-	    my $count = $count{$unit};
-	    if ($count == 1) {
-		$str .= $unit . " ";
-	    } elsif ($count == 2) {
-		$str .= "square $unit ";
-	    } elsif ($count == 3) {
-		$str .= "cubic $unit ";
-	    } else {
-		$str .= "$unit**$count ";
-	    }
+
+    my @top;
+    my @bottom;
+    while (my ($name, $power) = each %$u) {
+	if ($power > 0) {
+	    push @top, $name;
+	} else {
+	    push @bottom, $name;
 	}
-	chop($str);
-	return $str;
-    } else {
-	return render_unit($u->[1]) . " / " . render_unit($u->[2]);
     }
+
+    my $str = '';
+    foreach my $name (@top) {
+	if ($u->{$name} == 1) {
+	    $str .= "$name ";
+#  	} elsif ($u->{$name} == 2) {
+#  	    $str .= "square $name ";
+#  	} elsif ($u->{$name} == 3) {
+#  	    $str .= "cubic $name ";
+	} else {
+	    $str .= "$name**$u->{$name} ";
+	}
+    }
+
+    if (@bottom == 0) { chop($str); return $str; }
+
+    my %dummy;
+    @dummy{@bottom} = @$u{@bottom};
+    $dummy{$_} *= -1 for (keys %dummy);
+    my $botstr = render_unit(\%dummy);
+
+    if (@bottom > 1) {
+	$str .= "/ ($botstr)";
+    } else {
+	$str .= "/ $botstr";
+    }
+
+    return $str;
 }
 
 # render : <value,unit> -> string
 sub render {
     my $v = shift;
     my $u = render_unit($v->[1]);
-    my $val = sprintf("%.2f", $v->[0]);
-    if (int($val) / $val > 0.99) {
-	$val = int($val);
-    }
+
+    my $mag = sprintf("%.4g", $v->[0]);
     if ($u eq '') {
-	return $val;
+	return $mag;
     } else {
-	return "$val $u";
+	return "$mag $u";
     }
 }
 
@@ -228,7 +217,7 @@ sub get_pref {
 
     my $pref;
     if (! ref $unit) {
-	return Units::Calc::Convert::Multi->pref_score($unit);
+	return pref_score($unit);
     } elsif ($unit->[0] eq 'dot') {
 	my @list = @$unit;
 	shift(@list);
@@ -248,36 +237,27 @@ sub get_pref {
     }
 }
 
-# score(nonref unit) = 1 if it's within range, 0 otherwise.
-# score('per', top, bottom) = score(top)
-# score('dot', unit1, unit2, ...) = MAX(score(unit1), score(unit2), ...)
+# max_range_score : amount x [ unit ] -> score
 #
-sub range_score {
-    my $v = shift;
-    my ($val, $units) = @$v;
-    if (! ref $units) {
-	return Units::Calc::Convert::Multi->range_score($v);
-    } elsif ($units->[0] eq 'per') {
-	return range_score([ $val, $units->[1]]);
-    } elsif ($units->[0] eq 'dot') {
-	my $score = 0;
-	my @list = @$units;
-	shift(@list);
-	for (@list) {
-	    my $subscore = range_score([ $val, $_ ]);
-	    $score = $subscore if $score < $subscore;
-	}
-	return $score;
-    } else {
-	die;
+# Takes max score for listed units.
+#
+sub max_range_score {
+    my ($mag, $units) = @_;
+    my $score = 0;
+
+    foreach my $name (@$units) {
+	my $uscore = range_score($mag, $name);
+	$score = $uscore if $score < $uscore;
     }
+
+    return $score;
 }
 
 sub score {
-    my ($val, $unit, $top) = @_;
+    my ($mag, $unit, $top) = @_;
+    my @rangeable = @$top ? @$top : ($unit);
     my $pref = get_pref($unit);
-    return $pref if @$top == 0; # 782/sec
-    my $range_score = range_score([ $val, [ 'dot', @$top ] ]);
+    my $range_score = max_range_score($mag, \@rangeable);
     return $pref * $range_score;
 }
 
