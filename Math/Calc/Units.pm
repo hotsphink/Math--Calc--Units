@@ -1,29 +1,23 @@
 package Units::Calc;
 
-# Allow this module to be invoked directly from the command line.
-BEGIN {
-    if (!(caller(2))) {
-	eval 'use FindBin; use lib "$FindBin::Bin/..";';
-    }
-}
-
 use Units::Calc::Compute qw(compute);
-use Units::Calc::Rank qw(render choose_juicy_ones);
+use Units::Calc::Rank qw(render render_unit choose_juicy_ones);
 use Units::Calc::Convert;
 
 use base 'Exporter';
 use vars qw($VERSION @EXPORT_OK);
 BEGIN {
     $VERSION = '1.00';
-    @EXPORT_OK = qw(calc readable convert equal);
+    @EXPORT_OK = qw(calc readable convert equal exact);
 }
 use strict;
 
 # calc : string -> string
-sub calc {
-    my $expr = shift;
+# calc : string x true -> magnitude x string
+sub calc ($;$) {
+    my ($expr, $exact) = @_;
     my $v = compute($expr);
-    return render($v);
+    return $exact ? render($v) : ($v->[0], render_unit($v->[1]));
 }
 
 # readable : string -> ( string )
@@ -34,12 +28,12 @@ sub readable {
 }
 
 # convert : string x string -> string
-sub convert {
-    my ($expr, $units) = @_;
+sub convert ($$;$) {
+    my ($expr, $units, $exact) = @_;
     my $v = compute($expr);
     my $u = compute("# $units");
     my $c = Units::Calc::Convert::convert($v, $u->[1]);
-    return render($c);
+    return $exact ? render($c) : ($c->[0], render_unit($c->[1]));
 }
 
 # equal : string x string -> boolean
@@ -61,20 +55,72 @@ if (!(caller)) {
     print "$_\n" foreach readable($ARGV[0], $verbose);
 }
 
-# Below is the stub of documentation for your module. You better edit it!
-
 =head1 NAME
 
-Units::Calc - Unit-aware calculator with adaptive output
+Units::Calc - Human-readable unit-aware calculator
 
 =head1 SYNOPSIS
 
-  use Units::Calc;
-  blah blah blah
+    use Units::Calc qw(calc readable convert equal);
+
+    print "It will take ".calc("10MB/(384Kbps)")." to download\n";
+
+    my @alternative_descriptions = readable("10MB/(384Kbps)");
+
+    print "A week is ".convert("1 week", "seconds")." long\n";
+
+    if (equal("$rate bytes / sec", "1 MB/sec")) { ... };
 
 =head1 DESCRIPTION
 
-Does stuff.
+C<Units::Calc> is a simple calculator that keeps track of units. It
+currently handles combinations of byte sizes and duration only,
+although adding any other multiplicative types is easy. Any unknown
+type is treated as a unique user type (with some effort to map English
+plurals to their singular forms).
+
+The primary intended use is via the C<ucalc> script that prints out
+all of the "readable" variants of a value. For example, C<"3 bytes">
+will only produce C<"3 byte">, but C<"3 byte / sec"> produces the
+original along with C<"180 byte / minute">, C<"10.55 kilobyte / hour">,
+etc.
+
+The C<Units::Calc> interface only provides for string-based
+computations, which could result in a large loss of precision for some
+applications. If you need the exact result, you may pass in an extra
+parameter C<'exact'> to C<calc> or C<convert>, causing them to return a
+2-element list containing the numerical result and a string describing
+the units of that result:
+
+    my ($value, $units) = convert("10MB/sec", "GB/day");
+
+(In scalar context, they just return the numeric value.)
+
+=head2 Examples of use
+
+=over 4
+
+=item * Estimate transmission rates (e.g., 10MB at 384 kilobit/sec)
+
+=item * Estimate performance characteristics (e.g., disk I/O rates)
+
+=item * Figure out how long something will take to complete
+
+=back
+
+I tend to work on performance-sensitive code that involves a lot of
+network and disk traffic, so I wrote this tool after I became very
+sick of constantly converting KB/sec to GB/day when trying to figure
+out how long a run is going to take, or what the theoretical maximum
+performance would be if we were 100% disk bound. Now I can't live
+without it.
+
+=head2 Contraindications
+
+If you are just trying to convert from one unit to another, you'll
+probably be better off with C<Math::Units> or C<Convert::Units>. This
+module is really just for converting to and from human-readable
+values.
 
 =head1 AUTHOR
 
@@ -82,7 +128,7 @@ Steve Fink, sfink@cpan.org
 
 =head1 SEE ALSO
 
-ucalc(1), Math::Units, Convert::Units.
+ucalc, Math::Units, Convert::Units.
 
 =cut
 
