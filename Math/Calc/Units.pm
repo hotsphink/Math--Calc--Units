@@ -1,19 +1,18 @@
-use units;
+use lib '/home/sfink/units';
+
+package Units::Calc;
+use Units::Calc::Grammar;
 use Units::Calc::Convert;
+use base 'Exporter';
+use vars qw(@EXPORT_OK);
+@EXPORT_OK = qw(compute);
 
 use Data::Dumper;
 use strict;
 
-package units;
-
-sub tokenize {
-    my $data = shift;
-    my @tokens = $data =~ m{\s*([\d.]+|\w+|\*\*|[-+*/()])}g;
-    my @types = map {      /\d/ ? 'NUMBER'
-                      :(   /\w/ ? 'WORD'
-                      :(          $_)) } @tokens;
-    return \@tokens, \@types;
-}
+# Insert stuff into the grammar package so it can do immediate
+# calculations.
+package Units::Calc::Grammar;
 
 sub canonical {
     return Units::Calc::Convert::reduce(shift());
@@ -64,34 +63,37 @@ sub dot {
 package Units::Calc;
 use Data::Dumper;
 
-sub convert {
-    my ($vals, $types) = units::tokenize(shift());
+# Poor-man's tokenizer
+sub tokenize {
+    my $data = shift;
+    my @tokens = $data =~ m{\s*([\d.]+|\w+|\*\*|[-+*/()])}g;
+    my @types = map {      /\d/ ? 'NUMBER'
+                      :(   /\w/ ? 'WORD'
+                      :(          $_)) } @tokens;
+    return \@tokens, \@types;
+}
+
+sub compute {
+    my ($vals, $types) = tokenize(shift());
     my $lexer = sub {
 #        print "TOK($vals->[0]) TYPE($types->[0])\n" if @$vals;
         return shift(@$types), shift(@$vals) if (@$types);
         return ('', undef);
     };
 
-    my $parser = new units;
+    my $parser = new Units::Calc::Grammar;
 
-    my @r = @{
+    return
         $parser->YYParse(yylex => $lexer,
                          yyerror => sub {
                              my $parser = shift;
                              die "Error: expected ".join(" ", $parser->YYExpect)." got `".$parser->YYCurtok."', rest=".join(" ", @$types)."\nfrom ".join(" ", @$vals)."\n";
                          },
-                         yydebug => 0x1f);
-    };
-
-    return \@r;
-#    print Dumper(@r);
-#    print "UNITS\n";
-#    units::display_printable(\@r);
-#    units::display_printable(\@r, 4);
+                         yydebug => 0); # 0x1f);
 };
 
 if (!(caller)) {
-    print Dumper(convert(join('',@ARGV)));
+    print Dumper(compute(join('',@ARGV)));
 }
 
 1;
@@ -343,3 +345,4 @@ sub score {
     return $pref * $range_score; # Simple gate for now
 }
 
+1;

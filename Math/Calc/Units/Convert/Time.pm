@@ -7,6 +7,7 @@ use vars qw(%units %pref %total_unit_map);
 	   hour => [ 60, 'minute' ],
 	   day => [ 24, 'hour' ],
 	   week => [ 7, 'day' ],
+	   min => [ 1, 'minute' ],
 );
 
 %pref = ( minute => 1.1,
@@ -48,7 +49,7 @@ sub demetric {
     }
 }
 
-# convert : value x unit -> value
+# simple_convert : value x unit -> value
 #
 # Does not allow msec (only millisec or ms)
 #
@@ -69,7 +70,7 @@ sub simple_convert {
 	# Only use prefixes smaller than one, and pick the first
 	my ($expansion) = grep { ($self->demetric($from))[0] < 1 } @expansions;
 	if ($expansion) {
-	    return $self->convert($v, $expansion . "sec");
+	    return $self->simple_convert($v, $expansion . "sec");
 	}
     }
 

@@ -1,10 +1,4 @@
-
-# 1 sec
-# 1 / 2 sec = 0.5 sec
-# 1 / (2 sec) = 0.5 / sec
-# 1 byte second = 1 byte second
-# 1 byte / byte second = 1 / second
-# 1 byte second / byte = 1 second
+# To process: yapp -s -m Units::Calc::Grammar Grammar.y
 
 # Lowest
 %nonassoc BARE_UNIT

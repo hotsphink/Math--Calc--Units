@@ -28,7 +28,7 @@ sub get_metric {
 
 sub get_abbrev {
     my ($self, $what) = @_;
-    return $abbrev{$what};
+    return $abbrev{$what} || $abbrev{lc($what)};
 }
 
 $metric_prefix_test = qr/^(${\join("|",keys %metric_base2)})/i;
@@ -45,7 +45,7 @@ sub get_prefix {
 # Unnecessary efficiency hack: don't bother checking both upper & lower case
 sub expand {
     my ($self, $char) = @_;
-    return ($self->get_abbrev($char));
+    return $self->get_abbrev($char);
 }
 
 1;

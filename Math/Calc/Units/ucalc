@@ -1,0 +1,48 @@
+#!/usr/bin/perl -w
+
+use FindBin;
+use lib "$FindBin::Bin/..";
+#use Units::Calc;
+use Units::Calc::Convert qw(convert reduce);
+use Units::Calc qw(compute);
+
+sub assert ($$) {
+    my ($test, $shouldBe) = @_;
+    if ((! Units::Calc::Convert::Base->same($test->[1], $shouldBe->[1]))
+	|| (abs($test->[0] - $shouldBe->[0]) > 1e-9))
+    {
+	print "WAS: ".Dumper($test)."SHOULD BE: ".Dumper($shouldBe);
+	die;
+    }
+}
+
+use Data::Dumper;
+
+my $v = [ 1, 'minute' ];
+my $w = convert($v, 'sec');
+assert($w, [ 60, 'sec' ]);
+
+$v = [ 1, 'minute' ];
+$w = convert($v, 'minute');
+assert($w, [ 1, 'minute' ]);
+
+$v = [ 1, 'hour' ];
+$w = convert($v, 'hour');
+assert($w, [ 1, 'hour' ]);
+
+$v = [ 10, [ 'per', 'kilobits', 'minute' ] ];
+$w = convert($v, [ 'per', 'byte', 'sec' ] );
+assert($w, [ 10*1024/8/60, [ 'per', 'byte', 'sec' ] ]);
+
+$v = [ 10, [ 'per', 'seconds', 'second' ] ];
+$w = convert($v, [ 'per', 'byte', 'byte' ] );
+assert($w, [ 10, [ 'per', 'byte', 'byte' ] ]);
+assert(reduce($w), [ 10, 'unit' ]);
+
+assert(compute("10KB/min"), [ 10*1024/60, [ 'per', 'byte', 'sec' ] ]);
+assert(compute("10Kbyte/min"), [ 10*1024/60, [ 'per', 'byte', 'sec' ] ]);
+assert(compute("10Kbytes/min"), [ 10*1024/60, [ 'per', 'byte', 'sec' ] ]);
+
+$v = [ 1, 'Mbps' ];
+$w = convert($v, [ 'per', 'byte', 'sec' ]);
+assert($w, [ 1024**2, [ 'per', 'byte', 'sec' ]]);

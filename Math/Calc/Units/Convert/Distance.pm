@@ -16,3 +16,11 @@ my %distance_pref = ( meter => 1.1,
 		      mile => 1.0,
 );
 
+my %aliases = ( 'feet' => 'foot',
+		'second' => 'sec',
+		'h' => 'hour',
+		'hr' => 'hour',
+		'min' => 'minute',
+);
+
+1;

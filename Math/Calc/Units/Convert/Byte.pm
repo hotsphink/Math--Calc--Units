@@ -24,19 +24,19 @@ sub canonical_unit { return 'byte'; }
 
 sub simple_convert {
     my ($self, $v, $unit) = @_;
-    my $from = $v->[1];
+    my ($val, $from) = @$v;
 
     # 'b', 'byte', or 'bytes'
-    return [ 1, 'byte' ] if $from =~ /^b(yte(s?))?$/i;
+    return [ $val, 'byte' ] if $from =~ /^b(yte(s?))?$/i;
 
     if (my $easy = $self->SUPER::simple_convert($v, $unit)) {
 	return $easy;
     }
 
     # mb == megabyte
-    if ($from =~ /^(.)b$/) {
+    if ($from =~ /^(.)b(yte(s?))?$/i) {
 	if (my $prefix = $self->expand($1)) {
-	    return $self->convert($v, $prefix . "byte");
+	    return $self->simple_convert([ $val, $prefix . "byte" ], $unit);
 	}
     }
 

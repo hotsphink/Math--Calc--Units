@@ -75,6 +75,16 @@ sub get_prefix {
     }
 }
 
+sub get_abbrev_prefix {
+    my ($self, $what) = @_;
+    my $prefix = substr($what, 0, 1);
+    if ($abbrev{$prefix} || $abbrev{lc($prefix)}) {
+	return $prefix;
+    } else {
+	return;
+    }
+}
+
 # demetric : string => [ mult, base ]
 #
 # (pronounced de-metric, not demmetric or deme trick)
