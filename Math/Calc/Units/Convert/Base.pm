@@ -6,7 +6,8 @@ sub major_pref {
 }
 
 sub major_variants {
-    return ();
+    my ($self, $major) = @_;
+    return ($major);
 }
 
 # singular : unitName -> unitName
@@ -214,6 +215,10 @@ sub render_unit {
 sub render {
     my ($self, $val, $name, $power) = @_;
     return sprintf("%.4g ",$val).$self->render_unit($name, $power);
+}
+
+sub construct {
+    return;
 }
 
 1;

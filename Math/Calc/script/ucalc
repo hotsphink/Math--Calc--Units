@@ -35,7 +35,7 @@ How many gigabytes can you transfer in a week at 2MB/sec?
     $0 -c "2MB/sec" "GB/week"
 
 How many angels fit on the heads of 17 pins (with some assumptions)?
-(This demonstrates that unknown units are allowed.)
+(This demonstrates that unknown units are allowed, with plurals.)
     $0 "42 angels/pinhead * 17 pinheads"
 END
 

@@ -1,12 +1,12 @@
 # To process: yapp -s -m Math::Calc::Units::Grammar Grammar.y
 
 %{
-    use Math::Calc::Units::Compute qw(plus minus mult divide power);
+    use Math::Calc::Units::Compute qw(plus minus mult divide power construct);
 %}
 
 # Lowest
 %nonassoc BARE_UNIT
-%nonassoc NUMBER
+%nonassoc NUMBER CONSTRUCT
 %left '+' '-'
 %left '*' '/'
 %left WORD
@@ -30,11 +30,13 @@ expr : expr '+' expr   { return plus($_[1], $_[3]); }
 ;
 
 value : NUMBER unit
-                       { return [ $_[1], $_[2] ] }
+                       { return [ $_[1] => $_[2] ] }
       | unit %prec BARE_UNIT
-                       { return [ 1, $_[1] ] }
-      | NUMBER         { return [ $_[1], {} ] }
-      | '-' NUMBER     { return [ -$_[2], {} ] }
+                       { return [ 1 => $_[1] ] }
+      | NUMBER         { return [ $_[1] => {} ] }
+      | '-' NUMBER     { return [ -$_[2] => {} ] }
+      | '@' NUMBER     { return [ $_[2] => { 'timestamp' => 1 } ] }
+      | CONSTRUCT      { return construct($_[1]) }
 ;
 
 unit : WORD	       { return { $_[1] => 1 } }

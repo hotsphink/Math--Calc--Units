@@ -3,7 +3,8 @@ use base 'Exporter';
 use vars qw(@EXPORT_OK);
 @EXPORT_OK = qw(compute
 		plus minus mult divide power
-		unit_mult unit_divide unit_power);
+		unit_mult unit_divide unit_power
+                construct);
 use strict;
 
 use Math::Calc::Units::Convert qw(reduce);
@@ -16,23 +17,42 @@ sub equivalent {
     return Math::Calc::Units::Convert::Base->same($u, $v);
 }
 
+sub is_unit {
+    my ($x, $unit) = @_;
+    return equivalent($x, { $unit => 1 });
+}
+
 # All these assume the values are in canonical units.
 sub plus {
     my ($u, $v) = @_;
     $u = reduce($u);
     $v = reduce($v);
-    die "Unable to add incompatible units `".render_unit($u->[1])."' and `".render_unit($v->[1])."'"
-      if not equivalent($u->[1], $v->[1]);
-    return [ $u->[0] + $v->[0], $u->[1] ];
+
+    if (equivalent($u->[1], $v->[1])) {
+        return [ $u->[0] + $v->[0], $u->[1] ];
+    } elsif (is_unit($u->[1], 'timestamp') && is_unit($v->[1], 'sec')) {
+        return [ $u->[0] + $v->[0], $u->[1] ];
+    } elsif (is_unit($u->[1], 'sec') && is_unit($v->[1], 'timestamp')) {
+        return [ $u->[0] + $v->[0], $v->[1] ];
+    }
+
+    die "Unable to add incompatible units `".render_unit($u->[1])."' and `".render_unit($v->[1])."'";
 }
 
 sub minus {
     my ($u, $v) = @_;
     $u = reduce($u);
     $v = reduce($v);
-    die "Unable to subtract incompatible units `".render_unit($u->[1])."' and `".render_unit($v->[1])."'"
-      if not equivalent($u->[1], $v->[1]);
-    return [ $u->[0] - $v->[0], $u->[1] ];
+
+    if (is_unit($u->[1], 'timestamp') && is_unit($v->[1], 'timestamp')) {
+        return [ $u->[0] - $v->[0], { sec => 1 } ];
+    } elsif (equivalent($u->[1], $v->[1])) {
+        return [ $u->[0] - $v->[0], $u->[1] ];
+    } elsif (is_unit($u->[1], 'timestamp') && is_unit($v->[1], 'sec')) {
+        return [ $u->[0] - $v->[0], $u->[1] ];
+    }
+
+    die "Unable to subtract incompatible units `".render_unit($u->[1])."' and `".render_unit($v->[1])."'";
 }
 
 sub mult {
@@ -76,8 +96,14 @@ sub unit_divide {
 sub unit_power {
     my ($u, $power) = @_;
     return {} if $power == 0;
-    $_ *= $power foreach (values %$u);
+    $u->{$_} *= $power foreach (keys %$u);
     return $u;
+}
+
+sub construct {
+    my $s = shift;
+    my ($constructor, $args) = $s =~ /^(\w+)\((.*)\)/;
+    return Math::Calc::Units::Convert::construct($constructor, $args);
 }
 
 package Math::Calc::Units::Compute;
@@ -85,10 +111,18 @@ package Math::Calc::Units::Compute;
 # Poor-man's tokenizer
 sub tokenize {
     my $data = shift;
-    my @tokens = $data =~ m{\s*([\d.]+|\w+|\*\*|[-+*/()])}g;
-    my @types = map {      /\d/ ? 'NUMBER'
-                      :(   /\w/ ? 'WORD'
-                      :(          $_)) } @tokens;
+    my @tokens = $data =~ m{\s*
+                           (
+                             \w+\([^\(\)]*\) # constructed (eg date(2001...))
+                            |[\d.]+       # Numbers
+                            |\w+          # Words
+                            |\*\*         # Exponentiation (**)
+                            |[-+*/()@]    # Operators
+                           )}xg;
+    my @types = map {      /\w\(/ ? 'CONSTRUCT'
+                      :(   /\d/   ? 'NUMBER'
+                      :(   /\w/   ? 'WORD'
+                      :(            $_))) } @tokens;
     return \@tokens, \@types;
 }
 

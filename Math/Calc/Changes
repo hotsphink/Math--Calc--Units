@@ -3,3 +3,16 @@ Revision history for Perl extension Math::Calc::Units.
 1.00  Fri Aug 10 12:36:10 2001
 	- original version; created by h2xs 1.19
 
+1.01  Fri Sep  4
+	- added unit breakdowns (2 hour 46 minute)
+	- added percentages (0.034 is now displayed as 3.4%)
+	- improved performance
+	- added major unit preference ordering
+	- added out-of-range preference estimation
+
+1.02  Mon Oct 22 20:01:27 2001
+        - added timestamps
+        - added dates
+        - added constructor syntax for timestamps & dates
+        - fixed endless recursion bug
+        - added years (ugh... inexact unit)

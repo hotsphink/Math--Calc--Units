@@ -491,7 +491,7 @@ sub _Parse {
 
 #line 3 "Grammar.y"
 
-    use Math::Calc::Units::Compute qw(plus minus mult divide power);
+    use Math::Calc::Units::Compute qw(plus minus mult divide power construct);
 
 
 sub new {
@@ -504,17 +504,19 @@ sub new {
 [
 	{#State 0
 		ACTIONS => {
-			'NUMBER' => 4,
+			'NUMBER' => 5,
 			"#" => 2,
-			"-" => 5,
-			'WORD' => 6,
-			"(" => 3
+			"-" => 6,
+			'WORD' => 7,
+			'CONSTRUCT' => 3,
+			"\@" => 9,
+			"(" => 4
 		},
 		GOTOS => {
 			'unit' => 1,
-			'value' => 7,
-			'START' => 8,
-			'expr' => 9
+			'value' => 8,
+			'START' => 10,
+			'expr' => 11
 		}
 	},
 	{#State 1
@@ -522,212 +524,235 @@ sub new {
 	},
 	{#State 2
 		ACTIONS => {
-			'WORD' => 6
+			'WORD' => 7
 		},
-		GOTOS => {
-			'unit' => 10
-		}
-	},
-	{#State 3
-		ACTIONS => {
-			'NUMBER' => 4,
-			"-" => 5,
-			'WORD' => 6,
-			"(" => 3
-		},
-		GOTOS => {
-			'unit' => 1,
-			'value' => 7,
-			'expr' => 11
-		}
-	},
-	{#State 4
-		ACTIONS => {
-			'WORD' => 6
-		},
-		DEFAULT => -13,
 		GOTOS => {
 			'unit' => 12
 		}
 	},
+	{#State 3
+		DEFAULT => -16
+	},
+	{#State 4
+		ACTIONS => {
+			'NUMBER' => 5,
+			"-" => 6,
+			'WORD' => 7,
+			'CONSTRUCT' => 3,
+			"\@" => 9,
+			"(" => 4
+		},
+		GOTOS => {
+			'unit' => 1,
+			'value' => 8,
+			'expr' => 13
+		}
+	},
 	{#State 5
 		ACTIONS => {
-			'NUMBER' => 13
+			'WORD' => 7
+		},
+		DEFAULT => -13,
+		GOTOS => {
+			'unit' => 14
 		}
 	},
 	{#State 6
-		DEFAULT => -15
+		ACTIONS => {
+			'NUMBER' => 15
+		}
 	},
 	{#State 7
-		DEFAULT => -9
+		DEFAULT => -17
 	},
 	{#State 8
-		ACTIONS => {
-			'' => 15
-		}
+		DEFAULT => -9
 	},
 	{#State 9
 		ACTIONS => {
-			"*" => 18,
-			"+" => 19,
-			"**" => 17,
-			"-" => 20,
-			'WORD' => 6,
-			"/" => 21
-		},
-		DEFAULT => -1,
-		GOTOS => {
-			'unit' => 16
+			'NUMBER' => 17
 		}
 	},
 	{#State 10
-		DEFAULT => -2
+		ACTIONS => {
+			'' => 18
+		}
 	},
 	{#State 11
 		ACTIONS => {
-			"*" => 18,
-			"+" => 19,
-			"**" => 17,
-			"-" => 20,
-			'WORD' => 6,
-			"/" => 21,
-			")" => 22
+			"*" => 21,
+			"+" => 22,
+			"**" => 20,
+			"-" => 23,
+			'WORD' => 7,
+			"/" => 24
 		},
+		DEFAULT => -1,
 		GOTOS => {
-			'unit' => 16
+			'unit' => 19
 		}
 	},
 	{#State 12
-		DEFAULT => -11
+		DEFAULT => -2
 	},
 	{#State 13
-		DEFAULT => -14
+		ACTIONS => {
+			"*" => 21,
+			"+" => 22,
+			"**" => 20,
+			"-" => 23,
+			'WORD' => 7,
+			"/" => 24,
+			")" => 25
+		},
+		GOTOS => {
+			'unit' => 19
+		}
 	},
 	{#State 14
-		DEFAULT => -16
+		DEFAULT => -11
 	},
 	{#State 15
-		DEFAULT => -0
+		DEFAULT => -14
 	},
 	{#State 16
-		DEFAULT => -10
+		DEFAULT => -18
 	},
 	{#State 17
-		ACTIONS => {
-			'NUMBER' => 4,
-			"-" => 5,
-			'WORD' => 6,
-			"(" => 3
-		},
-		GOTOS => {
-			'unit' => 1,
-			'value' => 7,
-			'expr' => 23
-		}
+		DEFAULT => -15
 	},
 	{#State 18
-		ACTIONS => {
-			'NUMBER' => 4,
-			"-" => 5,
-			'WORD' => 6,
-			"(" => 3
-		},
-		GOTOS => {
-			'unit' => 1,
-			'value' => 7,
-			'expr' => 24
-		}
+		DEFAULT => -0
 	},
 	{#State 19
-		ACTIONS => {
-			'NUMBER' => 4,
-			"-" => 5,
-			'WORD' => 6,
-			"(" => 3
-		},
-		GOTOS => {
-			'unit' => 1,
-			'value' => 7,
-			'expr' => 25
-		}
+		DEFAULT => -10
 	},
 	{#State 20
 		ACTIONS => {
-			'NUMBER' => 4,
-			"-" => 5,
-			'WORD' => 6,
-			"(" => 3
+			'NUMBER' => 5,
+			"-" => 6,
+			'WORD' => 7,
+			'CONSTRUCT' => 3,
+			"\@" => 9,
+			"(" => 4
 		},
 		GOTOS => {
 			'unit' => 1,
-			'value' => 7,
+			'value' => 8,
 			'expr' => 26
 		}
 	},
 	{#State 21
 		ACTIONS => {
-			'NUMBER' => 4,
-			"-" => 5,
-			'WORD' => 6,
-			"(" => 3
+			'NUMBER' => 5,
+			"-" => 6,
+			'WORD' => 7,
+			'CONSTRUCT' => 3,
+			"\@" => 9,
+			"(" => 4
 		},
 		GOTOS => {
 			'unit' => 1,
-			'value' => 7,
+			'value' => 8,
 			'expr' => 27
 		}
 	},
 	{#State 22
-		DEFAULT => -8
+		ACTIONS => {
+			'NUMBER' => 5,
+			"-" => 6,
+			'WORD' => 7,
+			'CONSTRUCT' => 3,
+			"\@" => 9,
+			"(" => 4
+		},
+		GOTOS => {
+			'unit' => 1,
+			'value' => 8,
+			'expr' => 28
+		}
 	},
 	{#State 23
-		DEFAULT => -7,
+		ACTIONS => {
+			'NUMBER' => 5,
+			"-" => 6,
+			'WORD' => 7,
+			'CONSTRUCT' => 3,
+			"\@" => 9,
+			"(" => 4
+		},
 		GOTOS => {
-			'unit' => 16
+			'unit' => 1,
+			'value' => 8,
+			'expr' => 29
 		}
 	},
 	{#State 24
 		ACTIONS => {
-			"**" => 17,
-			'WORD' => 6
+			'NUMBER' => 5,
+			"-" => 6,
+			'WORD' => 7,
+			'CONSTRUCT' => 3,
+			"\@" => 9,
+			"(" => 4
 		},
-		DEFAULT => -5,
 		GOTOS => {
-			'unit' => 16
+			'unit' => 1,
+			'value' => 8,
+			'expr' => 30
 		}
 	},
 	{#State 25
-		ACTIONS => {
-			"**" => 17,
-			"*" => 18,
-			'WORD' => 6,
-			"/" => 21
-		},
-		DEFAULT => -3,
-		GOTOS => {
-			'unit' => 16
-		}
+		DEFAULT => -8
 	},
 	{#State 26
-		ACTIONS => {
-			"**" => 17,
-			"*" => 18,
-			'WORD' => 6,
-			"/" => 21
-		},
-		DEFAULT => -4,
+		DEFAULT => -7,
 		GOTOS => {
-			'unit' => 16
+			'unit' => 19
 		}
 	},
 	{#State 27
 		ACTIONS => {
-			"**" => 17,
-			'WORD' => 6
+			"**" => 20,
+			'WORD' => 7
+		},
+		DEFAULT => -5,
+		GOTOS => {
+			'unit' => 19
+		}
+	},
+	{#State 28
+		ACTIONS => {
+			"**" => 20,
+			"*" => 21,
+			'WORD' => 7,
+			"/" => 24
+		},
+		DEFAULT => -3,
+		GOTOS => {
+			'unit' => 19
+		}
+	},
+	{#State 29
+		ACTIONS => {
+			"**" => 20,
+			"*" => 21,
+			'WORD' => 7,
+			"/" => 24
+		},
+		DEFAULT => -4,
+		GOTOS => {
+			'unit' => 19
+		}
+	},
+	{#State 30
+		ACTIONS => {
+			"**" => 20,
+			'WORD' => 7
 		},
 		DEFAULT => -6,
 		GOTOS => {
-			'unit' => 16
+			'unit' => 19
 		}
 	}
 ],
@@ -794,36 +819,48 @@ sub
 		 'value', 2,
 sub
 #line 33 "Grammar.y"
-{ return [ $_[1], $_[2] ] }
+{ return [ $_[1] => $_[2] ] }
 	],
 	[#Rule 12
 		 'value', 1,
 sub
 #line 35 "Grammar.y"
-{ return [ 1, $_[1] ] }
+{ return [ 1 => $_[1] ] }
 	],
 	[#Rule 13
 		 'value', 1,
 sub
 #line 36 "Grammar.y"
-{ return [ $_[1], {} ] }
+{ return [ $_[1] => {} ] }
 	],
 	[#Rule 14
 		 'value', 2,
 sub
 #line 37 "Grammar.y"
-{ return [ -$_[2], {} ] }
+{ return [ -$_[2] => {} ] }
 	],
 	[#Rule 15
-		 'unit', 1,
+		 'value', 2,
 sub
-#line 40 "Grammar.y"
-{ return { $_[1] => 1 } }
+#line 38 "Grammar.y"
+{ return [ $_[2] => { 'timestamp' => 1 } ] }
 	],
 	[#Rule 16
+		 'value', 1,
+sub
+#line 39 "Grammar.y"
+{ return construct($_[1]) }
+	],
+	[#Rule 17
+		 'unit', 1,
+sub
+#line 42 "Grammar.y"
+{ return { $_[1] => 1 } }
+	],
+	[#Rule 18
 		 'unit', 2,
 sub
-#line 41 "Grammar.y"
+#line 43 "Grammar.y"
 { my $u = {}; $u->{$_[1]}++; $u->{$_[2]}++; return $u; }
 	]
 ],
@@ -831,7 +868,7 @@ sub
     bless($self,$class);
 }
 
-#line 44 "Grammar.y"
+#line 46 "Grammar.y"
 
 
 1;

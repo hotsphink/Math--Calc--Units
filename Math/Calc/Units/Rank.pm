@@ -45,8 +45,6 @@ sub rank_variants {
     # I. Convert to canonical form
     $v = canonical($v);
 
-    # II. Reduce unit down to the atomic component units and their powers
-    # eg mb / sec / sec -> <mb,1>, <sec,-2>
     my ($mag, $count) = @$v;
 
     my @rangeable = grep { $count->{$_} > 0 } keys %$count;
@@ -125,15 +123,21 @@ sub rank_power_variants {
     $mag *= $mult ** $power;
 
     my @choices;
+    my @subtop = grep { $_ ne $canon } @$top;
+    my $add_variant = (@subtop == @$top); # Flag: add $variant to @$top?
+
     foreach my $variant (variants($canon)) {
-	# Convert from $old to $variant
-	# Input: 4 / ms
-	# 1 ms -> 1000 us
-	# 4 * 1000 ** -1 = .04 / us
+	# Convert from $canon to $variant
+	# Input: 4000 / sec             ; (canon=sec)
+	# 1 ms -> .001 sec              ; (variant=ms)
+	# 4000 / (.001 ** -1) = 4 / ms
 	my $mult = $class->simple_convert($variant, $canon);
 	my $minimag = $mag / $mult ** $power;
 
-	my $score = score($minimag, $variant, $top, $keepall);
+        my @vtop = @subtop;
+        push @vtop, $variant if $add_variant;
+
+	my $score = score($minimag, $variant, \@vtop, $keepall);
 	print "($mag $unit) score $score:\t $minimag $variant\n"
 	    if $verbose;
 	next if (! $keepall) && ($score == 0);

@@ -5,16 +5,18 @@ BEGIN {
     @EXPORT_OK = qw(to_canonical simple_convert singular
 		    variants major_variants
 		    major_pref range_score pref_score
-		    get_class);
+		    get_class construct);
 };
 require Math::Calc::Units::Convert::Time;
 require Math::Calc::Units::Convert::Byte;
+require Math::Calc::Units::Convert::Date;
 require Math::Calc::Units::Convert::Combo;
 use strict;
 use vars qw(@UnitClasses);
 
 @UnitClasses = qw(Math::Calc::Units::Convert::Time
 		  Math::Calc::Units::Convert::Byte
+		  Math::Calc::Units::Convert::Date
 		  Math::Calc::Units::Convert::Combo);
 
 # to_canonical : unit -> value
@@ -125,6 +127,15 @@ sub pref_score {
     my ($unitName) = @_;
     die if ref $unitName;
     return get_class($unitName)->pref_score($unitName);
+}
+
+sub construct {
+    my ($constructor, $args) = @_;
+    foreach my $uclass (@UnitClasses) {
+	my $c;
+	return $c if $c = $uclass->construct($constructor, $args);
+    }
+    return;
 }
 
 1;

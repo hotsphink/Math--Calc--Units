@@ -7,6 +7,7 @@ use vars qw(%units %pref %ranges %total_unit_map);
 	   hour => [ 60, 'minute' ],
 	   day => [ 24, 'hour' ],
 	   week => [ 7, 'day' ],
+           year => [ 365, 'day' ], # Inexact unit... ugh...
 );
 
 %pref = ( default => 1,
@@ -14,6 +15,7 @@ use vars qw(%units %pref %ranges %total_unit_map);
 	  day => 0.8,
 	  week => 0.4,
 	  minute => 0.9,
+          year => 0.9,
 );
 
 %ranges = ( default => [ 1, 300 ],
@@ -21,8 +23,9 @@ use vars qw(%units %pref %ranges %total_unit_map);
 	    sec => [ 1, 200 ],
 	    minute => [ 2, 100 ],
 	    hour => [ 1, 80 ],
-	    day => [ 1, undef ],
+	    day => [ 1, 500 ],
 	    week => [ 1, 4 ],
+            year => [ 1, undef ],
 );
 
 sub major_pref {
@@ -116,7 +119,7 @@ sub get_prefs {
     return \%pref;
 }
 
-my @BREAKDOWN = qw(week day hour minute sec ms us ns ps);
+my @BREAKDOWN = qw(year week day hour minute sec ms us ns ps);
 sub render {
     my ($self, $val, $name, $power) = @_;
     my $basic = $self->SUPER::render($val, $name, $power);

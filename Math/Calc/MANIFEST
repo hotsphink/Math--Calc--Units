@@ -19,5 +19,6 @@ Units/Convert/Distance.pm
 Units/Convert/Metric.pm
 Units/Convert/Multi.pm
 Units/Convert/Time.pm
+Units/Convert/Date.pm
 Units.pm
 script/ucalc

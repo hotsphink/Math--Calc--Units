@@ -3,7 +3,7 @@
 
 ######################### We start with some black magic to print on failure.
 
-BEGIN { $| = 1; print "1..39\n"; }
+BEGIN { $| = 1; print "1..53\n"; }
 END { print "not ok 1 - failed to use Math::Calc::Units\n" unless $loaded; }
 use Math::Calc::Units qw(calc readable convert equal);
 $loaded = 1;
@@ -77,7 +77,31 @@ ok((grep { /./ } readable("10MB / 384Kbps")), "doc example 1");
 ok((grep { /./ } readable("8KB / (8KB/(20MB/sec) + 15ms)")), "doc example 2");
 ok((grep { /./ } readable("((1sec/20MB) + 15ms/8KB) ** -1")), "doc example 3");
 ok(convert("2MB/sec", "GB/week") =~ m!1181 GB / week!, "doc example 4");
-$DB::single = 1;
 ok((grep { /714 angel/ } readable("42 angels/pinhead * 17 pinheads")), "doc example 5");
+
+# 1.02 Fixes
+eval { convert("12 sec", "godlike_beings_of_inestimable_might"); };
+ok($@ =~ /conversion.*incompatible unit/i, "error: conversion to unknown units");
+
+my $good = not eval { equal('4 apples', '4 oranges'); };
+ok($good && $@ =~ /incompatible unit/i, "error: apples to oranges");
+
+ok(equal("365 days", "1 year"), "days -> year conversion");
+ok(equal('@8372423', '8372423 timestamp'), "timestamp unit parsing");
+ok(equal('@8372423', 'timestamp(8372423)'), "timestamp constructor");
+ok(equal('@1003685141', "date(Oct 21 17:25:41 2001)"), "timestamp, datetime");
+ok(equal('@1003622400', "date(Oct 21 2001)"), "timestamp, date");
+ok(equal('@1003622400', "date(2001-10-21)"), "timestamp, canon date");
+ok(equal('@1003685141', "date(2001-10-21 17:25:41)"), "timestamp, canon datetime");
+ok(equal('@1003622400', "date(Oct-21, 2001)"), "fuzzy datetime");
+
+ok(equal('@1003771541 - 1day', '@1003685141'), "timestamp-sec=timestamp");
+ok(equal('@1003780016-@1003622400', "157616sec"), "timestamp-timestamp=sec");
+ok(equal('@1003622400+157616sec', 'timestamp(1003780016)'), "timestamp+sec=sec");
+
+ok(readable('3 god/person * 1 angel'), "recursion bug");
+
+# Tentative 1.03 plans
+#ok(equal("4min 3sec", "4min + 3 sec"), "M min S sec input");
 
 exit($STATUS);
