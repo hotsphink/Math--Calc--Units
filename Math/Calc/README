@@ -27,19 +27,6 @@ Installing:
     make test
     make install
 
-Documentation:
+Documentation: perldoc Math::Calc::Units
 
-    perldoc Math::Calc::Units
-
-Author:
-
-    Steve Fink <sfink@cpan.org>
-
-Licensing:
-
-Copyright (c) 2001 by Steve A. Fink.
-All rights reserved.
-
-You are hereby granted permission to use this software under the terms
-of either the GPL or the Artistic License. See the file LICENSE for
-opinionated details.
+Author: Steve Fink <sfink@cpan.org>

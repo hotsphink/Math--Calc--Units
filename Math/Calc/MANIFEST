@@ -11,9 +11,6 @@ Units/Convert.pm
 Units/Grammar.pm
 Units/Grammar.y
 Units/Rank.pm
-Units/Convert/CVS/Root
-Units/Convert/CVS/Repository
-Units/Convert/CVS/Entries
 Units/Convert/Base.pm
 Units/Convert/Base2Metric.pm
 Units/Convert/Byte.pm
