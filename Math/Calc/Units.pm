@@ -7,7 +7,7 @@ use Math::Calc::Units::Convert;
 use base 'Exporter';
 use vars qw($VERSION @EXPORT_OK);
 BEGIN {
-    $VERSION = '1.00';
+    $VERSION = '1.01';
     @EXPORT_OK = qw(calc readable convert equal exact);
 }
 use strict;

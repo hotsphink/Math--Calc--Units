@@ -28,7 +28,7 @@ use vars qw(%niceSmallMetric %metric %pref %abbrev $metric_prefix_test);
 	  tera => 0.7,
 	  peta => 0.6,
 	  exa => 0.3,
-	  centi => 0.5,
+	  centi => 0.1,
 	  milli => 0.8,
 	  micro => 0.8,
 	  nano => 0.6,

@@ -100,15 +100,6 @@ sub simple_convert {
 
 ##############################################################################
 
-sub describe {
-    my $self = shift;
-    my $v = shift;
-    die "Huh? Can only do seconds!" if $v->[1] ne 'sec';
-    my @spread = $self->spread($v, 'week', 'day', 'hour', 'minute', 'sec',
-			       'ms', 'us', 'ns', 'ps');
-    return (\@spread, $v); # Hmm... what type am I returning??
-}
-
 sub preference {
     my ($self, $v) = @_;
     my ($val, $unit) = @$v;
@@ -123,6 +114,20 @@ sub get_ranges {
 
 sub get_prefs {
     return \%pref;
+}
+
+my @BREAKDOWN = qw(week day hour minute sec ms us ns ps);
+sub render {
+    my ($self, $val, $name, $power) = @_;
+    my $basic = $self->SUPER::render($val, $name, $power);
+    return $basic if $power != 1;
+
+    $val *= $self->simple_convert($name, 'sec');
+    my @spread = $self->spread($val, 'sec', $name, \@BREAKDOWN);
+    my $spread = join(" ", map { "$_->[0] $_->[1]" } @spread);
+
+    return "($basic = $spread)" if @spread > 1;
+    return $basic;
 }
 
 1;

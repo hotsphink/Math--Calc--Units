@@ -7,21 +7,15 @@ use Math::Calc::Units::Convert qw(convert canonical);
 use Math::Calc::Units::Convert::Multi qw(variants major_variants major_pref pref_score range_score get_class);
 use strict;
 
-sub display_printable {
-    my ($v, $max) = @_;
-    my $printed = 0;
-    for (printable($v)) {
-	my ($score, $pv) = @$_;
-	print render($pv) . " (score=".score($pv).")\n";
-	last if $max && ++$printed > $max;
-    }
-}
-
 # choose_juicy_ones : value -> ( value )
 #
 sub choose_juicy_ones {
     my ($v, $verbose) = @_;
     my @variants = rank_variants($v, 0, $verbose); # ( < {old=>new}, score > )
+    if (@variants == 0) {
+	@variants = rank_variants($v, 1, $verbose);
+	pop(@variants) while @variants > 5;
+    }
     my %variants; # To remove duplicates: { id => [ {old=>new}, score ] }
     for my $variant (@variants) {
 	my $id = join(";;", values %{ $variant->[0] });
@@ -90,7 +84,7 @@ sub rank_power_variants {
 	my %powerless = %$power;
 	delete $powerless{$major};
 
-	my @ranked;
+	my @ranked; # ( <map,score> )
 
 	# Try every combination of each major variant and the other units
 	foreach my $variant (major_variants($major)) {
@@ -102,15 +96,15 @@ sub rank_power_variants {
 	    next if @r == 0;
 
 	    my $best = $r[0];
-	    $best->[0]->{$major} = $variant;
+	    $best->[0]->{$major} = $variant; # Augment map
+	    # Replace score with major pref
+	    $best->[1] = pref_score($variant);
 	    push @ranked, $best;
 	}
 
 	if (@ranked == 0) {
 	    return rank_power_variants($mag, $top, $power, 1, $verbose);
 	}
-
-	# Update scores to reflect preferences
 
 	return @ranked;
     }
@@ -120,7 +114,7 @@ sub rank_power_variants {
 
     if (keys %$power == 0) {
 	# Special case: we don't have any units at all
-	return [ {}, 'unit' ];
+	return [ {}, 1 ];
     }
 
     my $unit = (keys %$power)[0];
@@ -137,10 +131,9 @@ sub rank_power_variants {
 	# 1 ms -> 1000 us
 	# 4 * 1000 ** -1 = .04 / us
 	my $mult = $class->simple_convert($variant, $canon);
-	$DB::single = 1 if not $mult;
 	my $minimag = $mag / $mult ** $power;
 
-	my $score = score($minimag, $variant, $top);
+	my $score = score($minimag, $variant, $top, $keepall);
 	print "($mag $unit) score $score:\t $minimag $variant\n"
 	    if $verbose;
 	next if (! $keepall) && ($score == 0);
@@ -155,11 +148,53 @@ sub rank_power_variants {
 }
 
 sub render_unit {
-    my $u = shift;
+    my $units = shift;
+
+    my $str = '';
+    while (my ($name, $power) = each %$units) {
+	if ($power > 0) {
+	    $str .= get_class($name)->render_unit($name, $power);
+	    $str .= " ";
+	}
+    }
+    chop($str);
+
+    my $botstr = '';
+    while (my ($name, $power) = each %$units) {
+	if ($power < 0) {
+	    $botstr .= get_class($name)->render_unit($name, -$power);
+	    $botstr .= " ";
+	}
+    }
+    chop($botstr);
+
+    if ($botstr eq '') {
+	return $str;
+    } elsif ($botstr =~ /\s/) {
+	return "$str / ($botstr)";
+    } else {
+	return "$str / $botstr";
+    }
+}
+
+# render : <value,unit> -> string
+sub render {
+    my $v = shift;
+    my ($mag, $units) = @$v;
+
+    # No units
+    if (keys %$units == 0) {
+	# Special-case percentages
+	my $str = sprintf("%.4g", $mag);
+	if (($mag < 1) && ($mag >= 0.01)) {
+	    $str .= sprintf(" = %.4g percent", 100 * $mag);
+	}
+	return $str;
+    }
 
     my @top;
     my @bottom;
-    while (my ($name, $power) = each %$u) {
+    while (my ($name, $power) = each %$units) {
 	if ($power > 0) {
 	    push @top, $name;
 	} else {
@@ -167,74 +202,36 @@ sub render_unit {
 	}
     }
 
-    my $str = '';
-    foreach my $name (@top) {
-	if ($u->{$name} == 1) {
-	    $str .= "$name ";
-#  	} elsif ($u->{$name} == 2) {
-#  	    $str .= "square $name ";
-#  	} elsif ($u->{$name} == 3) {
-#  	    $str .= "cubic $name ";
+    my $str;
+    if (@top == 1) {
+	my ($name) = @top;
+	$str = get_class($name)->render($mag, $name, $units->{$name});
+	$str .= " ";
+    } else {
+	$str = sprintf("%.4g ", $mag);
+	foreach my $name (@top) {
+	    $str .= get_class($name)->render_unit($name, $units->{$name});
+	    $str .= " ";
+	}
+    }
+
+    if (@bottom > 0) {
+	my $botstr;
+	foreach my $name (@bottom) {
+	    $botstr .= get_class($name)->render_unit($name, -$units->{$name});
+	    $botstr .= " ";
+	}
+	chop($botstr);
+
+	if (@bottom > 1) {
+	    $str .= "/ ($botstr) ";
 	} else {
-	    $str .= "$name**$u->{$name} ";
+	    $str .= "/ $botstr ";
 	}
     }
 
-    if (@bottom == 0) { chop($str); return $str; }
-
-    my %dummy;
-    @dummy{@bottom} = @$u{@bottom};
-    $dummy{$_} *= -1 for (keys %dummy);
-    my $botstr = render_unit(\%dummy);
-
-    if (@bottom > 1) {
-	$str .= "/ ($botstr)";
-    } else {
-	$str .= "/ $botstr";
-    }
-
+    chop($str);
     return $str;
-}
-
-# render : <value,unit> -> string
-sub render {
-    my $v = shift;
-    my $u = render_unit($v->[1]);
-
-    my $mag = sprintf("%.4g", $v->[0]);
-    if ($u eq '') {
-	return $mag;
-    } else {
-	return "$mag $u";
-    }
-}
-
-# pref(nonref unit) = ...
-# pref(dot(a,b...)) = MIN(pref(a),pref(b),...)
-# pref(per(a,b)) = 75% pref(a) + 25% pref(b)
-sub get_pref {
-    my $unit = shift;
-
-    my $pref;
-    if (! ref $unit) {
-	return pref_score($unit);
-    } elsif ($unit->[0] eq 'dot') {
-	my @list = @$unit;
-	shift(@list);
-	foreach (@list) {
-	    my $termpref = get_pref($_);
-	    if (!defined $pref) {
-		$pref = $termpref;
-	    } elsif ($pref > $termpref) {
-		$pref = $termpref;
-	    }
-	}
-	return $pref;
-    } elsif ($unit->[0] eq 'per') {
-	return get_pref($unit->[1]) * 0.75 + get_pref($unit->[2]);
-    } else {
-	die;
-    }
 }
 
 # max_range_score : amount x [ unit ] -> score
@@ -242,11 +239,11 @@ sub get_pref {
 # Takes max score for listed units.
 #
 sub max_range_score {
-    my ($mag, $units) = @_;
+    my ($mag, $units, $allow_out_of_range) = @_;
     my $score = 0;
 
     foreach my $name (@$units) {
-	my $uscore = range_score($mag, $name);
+	my $uscore = range_score($mag, $name, $allow_out_of_range);
 	$score = $uscore if $score < $uscore;
     }
 
@@ -254,10 +251,10 @@ sub max_range_score {
 }
 
 sub score {
-    my ($mag, $unit, $top) = @_;
+    my ($mag, $unit, $top, $allow_out_of_range) = @_;
     my @rangeable = @$top ? @$top : ($unit);
-    my $pref = get_pref($unit);
-    my $range_score = max_range_score($mag, \@rangeable);
+    my $pref = pref_score($unit);
+    my $range_score = max_range_score($mag, \@rangeable, $allow_out_of_range);
     return $pref * $range_score;
 }
 

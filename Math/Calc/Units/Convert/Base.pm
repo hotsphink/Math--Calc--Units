@@ -93,28 +93,32 @@ sub canonical_unit {
 
 #################### RANKING, SCORING, DISPLAYING ##################
 
-# 837473sec -> 12 weeks, 4 days, 2 hours, 3 sec
-# @units MUST BE SORTED, LARGER UNITS FIRST!
+# spread : magnitude x base unit x units to spread over
+#  -> ( <mag,unit> )
+#
+# @$units MUST BE SORTED, LARGER UNITS FIRST!
+#
+my $THRESHOLD = 0.01;
 sub spread {
-    my ($self, $v, @units) = @_;
+    my ($self, $mag, $base, $start, $units) = @_;
+    die if $mag < 0; # Must be given a positive value!
+    return [ 0, $base ] if $mag == 0;
 
-    my $orig = $v;
+    my $orig = $mag;
 
     my @desc;
-    foreach my $unit (@units) {
-	last if $v->[0] == 0;
-	my $w = $self->convert($v, $unit);
-	if ($self->score($w) >= 1) {
-	    my $round = int($w->[0]);
-	    push @desc, [ $round, $w->[1] ];
-	    $w->[0] -= $round;
-	    $v = $w;
-	    # (check remainder's percentage of original)
-	}
-    }
+    my $started = 0;
+    foreach my $unit (@$units) {
+	$started = 1 if $unit eq $start;
+	next unless $started;
 
-    # TODO: Cut off the spreading when the smaller units contribute
-    # inconsequential amounts
+	last if ($mag / $orig) < $THRESHOLD;
+	my $mult = $self->simple_convert($unit, $base);
+	my $n = int($mag / $mult);
+	next if $n == 0;
+	$mag -= $n * $mult;
+	push @desc, [ $n, $unit ];
+    }
 
     return @desc;
 }
@@ -122,13 +126,64 @@ sub spread {
 # range_score : amount x unitName -> score
 #
 sub range_score {
-    my ($self, $val, $unitName) = @_;
+    my ($self, $val, $unitName, $allow_out_of_range) = @_;
+    if ($allow_out_of_range) {
+	return $self->norm_range_score($val, $unitName);
+    }
     my $ranges = $self->get_ranges();
     my $range = $ranges->{$unitName} || $ranges->{default};
     return 0 if $val < $range->[0];
     return 1 if ! defined $range->[1];
     return 0 if $val > $range->[1];
     return 1;
+}
+
+sub _sillylog {
+    my $x = shift;
+    return log($x) if $x;
+    return log(1e-50);
+}
+
+# norm_range_score : amount x unitName -> score
+#
+# This is for use when nothing is found in range, and you want to pick
+# the best of the bad. For no good reason, I convert to log space (so
+# 1/400 is just as far away from 1 as 400), and use a normal
+# distribution where the allowed range is the 1 standard deviation
+# range.
+#
+# Oh, and now I add in a bonus 0.1 to give the preference multiplier
+# something to work with. Does wonders for shooting down centiseconds.
+#
+sub norm_range_score {
+    my ($self, $val, $unitName) = @_;
+    my $ranges = $self->get_ranges();
+    my $range = $ranges->{$unitName} || $ranges->{default};
+
+    # Return 1 if it's in range
+    if ($val >= $range->[0]) {
+	if (! defined $range->[1] || ($val <= $range->[1])) {
+	    return 1;
+	}
+    }
+
+    $val = _sillylog($val);
+
+    my $r0 = _sillylog($range->[0]);
+    my $r1;
+    if (defined $range->[1]) {
+	$r1 = _sillylog($range->[1]);
+    } else {
+	$r1 = 4;
+    }
+
+    my $width = $r1 - $r0;
+    my $mean = ($r0 + $r1) / 2;
+    my $stddev = $width / 2;
+
+    my $n = ($val - $mean) / $stddev; # Normalized value
+
+    return exp(-$n**2/2) + 0.1;
 }
 
 # pref_score : unitName -> score
@@ -145,6 +200,20 @@ sub get_prefs {
 
 sub get_ranges {
     return { default => [ 1, undef ] };
+}
+
+sub render_unit {
+    my ($self, $name, $power) = @_;
+    if ($power == 1) {
+	return $name;
+    } else {
+	return "$name**$power";
+    }
+}
+
+sub render {
+    my ($self, $val, $name, $power) = @_;
+    return sprintf("%.4g ",$val).$self->render_unit($name, $power);
 }
 
 1;
