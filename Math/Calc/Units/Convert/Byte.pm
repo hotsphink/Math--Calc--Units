@@ -4,8 +4,17 @@ use strict;
 use vars qw(%units %pref %ranges %total_unit_map);
 
 %units = ( bit => [ 1/8, 'byte' ] );
-%pref = ( bit => 0.1 );
+%pref = ( bit => 0.1, default => 1 );
 %ranges = ( default => [ 1, 999 ] );
+
+sub major_pref {
+    return 1;
+}
+
+sub major_variants {
+    my ($self) = @_;
+    return $self->variants('byte');
+}
 
 sub get_ranges {
     return \%ranges;
@@ -13,12 +22,6 @@ sub get_ranges {
 
 sub get_prefs {
     return \%pref;
-}
-
-# Return a list of the variants of byte: none
-sub variants {
-#    my ($self) = @_;
-    return; # No variants of byte
 }
 
 sub unit_map {

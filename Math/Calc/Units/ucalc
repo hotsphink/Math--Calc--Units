@@ -19,7 +19,7 @@ sub assert ($$) {
 
 use Data::Dumper;
 
-# print Dumper(Units::Calc::Rank::choose_juicy_ones([3600, 'sec']));
+print Dumper(Units::Calc::Rank::choose_juicy_ones([3600, ['per', 'byte', 'sec']]));
 
 my $v = [ 1, 'minute' ];
 my $w = convert($v, 'sec');

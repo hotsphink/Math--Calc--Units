@@ -56,6 +56,10 @@ sub prefix_pref {
     return $pref{lc($prefix)} || $pref{unit};
 }
 
+sub get_prefixes {
+    return keys %metric_base2;
+}
+
 # Unnecessary efficiency hack: don't bother checking both upper & lower case
 sub expand {
     my ($self, $char) = @_;

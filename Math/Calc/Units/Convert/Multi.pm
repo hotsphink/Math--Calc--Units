@@ -62,7 +62,17 @@ sub get_class {
 
 sub variants {
     my ($self, $base) = @_;
-    return $base, keys %{ $self->get_class($base)->unit_map() };
+    return $self->get_class($base)->variants($base);
+}
+
+sub major_variants {
+    my ($self, $base) = @_;
+    return $self->get_class($base)->major_variants($base);
+}
+
+sub major_pref {
+    my ($self, $base) = @_;
+    return $self->get_class($base)->major_pref($base);
 }
 
 sub range_score {

@@ -74,8 +74,6 @@ sub singular {
     chop; return $_; # Chop off the s
 }
 
-#    return { bps => [ 1, [ 'per', 'bit', 'sec' ] ] };
-
 # dot() -> unit
 # dot(a) -> a
 # dot(a,b,...) -> [ 'dot', a, b, ... ]
@@ -275,27 +273,6 @@ sub _unit_mult ($$;$) {
 sub _unit_divide ($$;$) {
     my ($u, $v, $do_reduce) = @_;
     return _unit_mult($u, ['per', 'unit', $v], $do_reduce);
-}
-
-################################### OUTPUT ###################################
-
-# describe : value -> ( value )
-sub describe {
-    my ($self, $v) = @_;
-    my @equivs = $self->variants();
-    my @descs;
-    foreach my $unit (@equivs) {
-	my $w = $self->convert($v, $unit);
-	my $score = $self->score($w);
-	push @descs, [ $w, $score ];
-    }
-    return map { $_->[0] } sort { $b->[1] <=> $a->[1] } @descs;
-}
-
-sub score {
-    my $v = shift;
-    return 1 if ($v->[0] > 1 && $v->[0] <= 999);
-    return 0.5;
 }
 
 1;

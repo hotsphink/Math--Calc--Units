@@ -1,4 +1,8 @@
 package Units::Calc::Rank;
+use base 'Exporter';
+use vars qw(@EXPORT_OK);
+BEGIN { @EXPORT_OK = qw(choose_juicy_ones render); }
+
 use Units::Calc::Convert qw(convert canonical find_top);
 use Units::Calc::Convert::Multi;
 use strict;
@@ -18,87 +22,157 @@ sub variants {
     return Units::Calc::Convert::Multi->variants($base);
 }
 
+sub major_variants {
+    my $base = shift;
+    return Units::Calc::Convert::Multi->major_variants($base);
+}
+
+sub major_pref {
+    my $unit = shift;
+    return Units::Calc::Convert::Multi->major_pref($unit);
+}
+
+sub to_powerform {
+    my $unit = shift;
+    my @top = find_top($unit);
+    my @bottom = find_top($unit, 'invert');
+    my %count;
+    $count{$_}++ for (@top);
+    $count{$_}-- for (@bottom);
+    delete $count{unit};
+
+    return \%count;
+}
+
+# Powerform: { unit => count }
+sub from_powerform {
+    my $power = shift;
+    my @top;
+    my @bottom;
+    while (my ($type, $power) = each %$power) {
+	if ($power > 0) {
+	    push @top, ($type) x $power;
+	} elsif ($power < 0) {
+	    push @bottom, ($type) x -$power;
+	}
+    }
+
+    return Units::Calc::Convert::_canonical_reciprocal(\@top, \@bottom);
+}
+
+# choose_juicy_ones : value -> ( value )
+#
 sub choose_juicy_ones {
     my ($v) = @_;
+    my @variants = rank_variants($v); # ( < {old=>new}, score > )
+    my %variants; # To remove duplicates: { id => [ {old=>new}, score ] }
+    for my $variant (@variants) {
+	my $id = join(";;", values %{ $variant->[0] });
+	$variants{$id} = $variant;
+    }
+
+    my $power = to_powerform($v->[1]);
+
+    my @juicy;
+
+    for my $variant (values %variants) {
+	my ($map, $score) = @$variant;
+	my %copy;
+	while (my ($unit, $count) = each %$power) {
+	    $copy{$map->{$unit}} = $count;
+	}
+	push @juicy, [ $score, convert($v, from_powerform(\%copy)) ];
+    }
+
+    return map { $_->[1] } sort { $b->[0] <=> $a->[0] } @juicy;
+}
+
+# rank_variants : <amount,unit> -> ( < map, score > )
+# where map : [original unit => new unit]
+#
+sub rank_variants {
+    my ($v, $keepall) = @_;
 
     # I. Convert to canonical form
     $v = canonical($v);
 
     # II. Reduce unit down to the atomic component units and their powers
     # eg mb / sec / sec -> <mb,1>, <sec,-2>
-    my @top = find_top($v->[1]);
-    my @bottom = find_top($v->[1], 'invert');
-    my %count;
-    $count{$_}++ for (@top);
-    $count{$_}-- for (@bottom);
-    delete $count{unit};
+    my $count = to_powerform($v->[1]);
 
-    # III. Try every combination of units
-
-    # Danger of combinatorial explosion: if we have four distinct
-    # types of units, and each has 13 different possibilities (which
-    # is likely given metric units), then we'd have to try 13^4
-    # combinations. Which is less than 30,000, so I won't worry about
-    # it for now.
-
-    my @variants; # [ i => [ variants of unit #i ] ]
-    my @unitList = keys %count; # Will reuse later
-    push @variants, [ variants($_) ] foreach (@unitList);
-
-    # Loop over combinations (watch out, this'll get messy)
-    my @comb = map { $_->[0] } @variants; # ( i => unit )
-    my @current = (0) x @variants; # ( i => index of @comb's unit in the set of variants )
-
-    my $val = $v->[0];
-
-    my @scored;
-    push @scored, [ [@comb], score_comb($val, \@comb) ];
-
-    # Heh. A very fun piece of code follows.
+    my @top = grep { $count->{$_} > 0 } keys %$count;
 
     $DB::single = 1;
-
-  COMBINATION:
-    while (1) {
-	# Advance to next
-	for my $i (0..$#variants) {
-	    my $n = @{$variants[$i]};
-
-	    if (++$current[$i] == $n) {
-		$current[$i] = 0;
-	    }
-
-	    my $old = $comb[$i];
-	    my $new = $comb[$i] = $variants[$i]->[$current[$i]];
-
-	    # Change unit $old to $new and update $val accordingly
-	    # Input: 4 / ms
-	    # 1 ms -> 1000 us
-	    # 4 * 1000 ** -1 = .04 / us
-	    my $c = convert([ 1, $old ], $new);
-	    $val *= $c->[0] ** $count{$unitList[$i]};
-
-	    my $score = score_comb($val, \@comb);
-	    if ($current[$i] == 0) {
-		push @scored, [ [@comb], $score ];
-	    } else {
-		# Optimization that's minor in general but pretty significant
-		# when small numbers of distinct base units are involved --
-		# which is always, at the moment.
-		if ($score > $scored[-1]->[1]) {
-		    $scored[-1] = [ [@comb], $score ];
-		}
-	    }
-
-	    next COMBINATION unless $current[$i] == 0;
-	}
-
-	last;
-    }
-
-    return sort { $b->[1] <=> $a->[1] } @scored;
+    return rank_power_variants($v->[0], \@top, $count, $keepall);
 }
 
+# rank_power_variants : value x [unit] x {unit=>power} x keepall_flag ->
+#  ( <map,score> )
+#
+# $top is the set of units that should be range checked.
+#
+sub rank_power_variants {
+    my ($val, $top, $power, $keepall) = @_;
+
+    if (keys %$power > 1) {
+	# Choose the major unit class (this will return the best
+	# result for each of the major variants)
+	my @majors = map { [ major_pref($_), $_ ] } keys %$power;
+	my $major = (sort { $a->[0] <=> $b->[0] } @majors)[-1]->[1];
+
+	my %powerless = %$power;
+	delete $powerless{$major};
+
+	my @ranked;
+
+	# Try every combination of each major variant and the other units
+	foreach my $variant (major_variants($major)) {
+	    my $c = convert([ 1, $major ], $variant);
+	    my $cval = $val * $c->[0] ** $power->{$major};
+
+	    print "\n --- for $variant ---\n";
+	    my @r = rank_power_variants($cval, $top, \%powerless, 0);
+	    if (@r == 0) {
+		@r = rank_power_variants($cval, $top, \%powerless, 1);
+	    }
+
+	    my $best = $r[0];
+	    $best->[0]->{$major} = $variant;
+	    push @ranked, $best;
+	}
+
+	# Update scores to reflect preferences
+
+	return @ranked;
+    }
+
+    # Have a single unit left. Go through all possible variants of that unit.
+    my $unit = (keys %$power)[0];
+    $power = $power->{$unit}; # Now it's just the power of this unit
+
+    my $old = $unit;
+    my @choices;
+    foreach my $variant (variants($unit)) {
+	# Convert from $old to $variant
+	# Input: 4 / ms
+	# 1 ms -> 1000 us
+	# 4 * 1000 ** -1 = .04 / us
+	my $c = convert([ 1, $old ], $variant);
+	$val *= $c->[0] ** $power;
+	$old = $variant;
+
+	my $score = score($val, $variant, $top);
+	print "Variant($unit)=$val $variant score=$score\n";
+	next if (! $keepall) && ($score == 0);
+	push @choices, [ $score, $variant ];
+    }
+
+    @choices = sort { $b->[0] <=> $a->[0] } @choices;
+    return () if @choices == 0;
+    @choices = ($choices[0]) if not $keepall; # Single best one
+
+    return map { [ {$unit => $_->[1]}, $_->[0] ] } @choices;
+}
 
 sub render_unit {
     my $u = shift;
@@ -131,6 +205,7 @@ sub render_unit {
     }
 }
 
+# render : <value,unit> -> string
 sub render {
     my $v = shift;
     my $u = render_unit($v->[1]);
@@ -144,90 +219,6 @@ sub render {
 	return "$val $u";
     }
 }
-
-#  sub equivalents {
-#      my $units = shift;
-
-#      if (! ref $units) {
-#  	if ($units eq 'byte') {
-#  	    return $units, map { $_ . "byte" } keys %metric_base2;
-#  	} elsif ($units eq 'sec') {
-#  	    my @small = map { $_ . "sec" } keys %niceSmallMetric;
-#  	    my @big = keys %time_units;
-#  	    return $units, @small, @big;
-#  	} elsif ($units eq 'meter') {
-#  	    return $units,
-#  	           (map { $_ . "meter" } keys %metric),
-#  	           keys %distance_units;
-#  	} else {
-#  	    return ( $units );
-#  	}
-#      } elsif ($units->[0] eq 'dot') {
-#  	my @list = @$units;
-#  	shift(@list);
-
-#  	my %count;
-#  	foreach my $u (@list) {
-#  	    $count{$u}++;
-#  	}
-
-#  	my @count;
-#  	my @equivs;
-#  	my $i = 0;
-#  	foreach my $u (sort keys %count) {
-#  	    $count[$i] = $count{$u};
-#  	    @{ $equivs[$i++] } = equivalents($u);
-#  	}
-
-#  	my @result;
-#  	for my $combination (allCombinations(@equivs)) {
-#  	    my $unit = [ 'dot' ];
-#  	    for $i (0 .. @$combination) {
-#  		push @$unit, ( $combination->[$i] ) x $count[$i];
-#  	    }
-#  	    push @result, $unit;
-#  	}
-	
-#  	return @result;
-#      } elsif ($units->[0] eq 'per') {
-#  	my @equivs;
-#  	my $i = 0;
-#  	foreach my $u ($units->[1], $units->[2]) {
-#  	    @{ $equivs[$i++] } = equivalents($u);
-#  	}
-
-#  	my @result;
-#  	for my $combination (allCombinations([ equivalents($units->[1]) ],
-#  					     [ equivalents($units->[2]) ]))
-#  	{
-#  	    push @result, [ 'per', @$combination ];
-#  	}
-	
-#  	return @result;
-#      }
-#  }
-
-#  # ( [ a1..aM ], [ b1..bN ] ] ) -> ( [ a1,b1 ], [ a1,b2 ], ..., [ a1, bN ],
-#  #                                   [ a2,b1 ], [ a2,b2 ], ..., [ a2, bN ],
-#  #                                   .
-#  #                                   .
-#  #                                   [ aM,b1 ], [ aM,b2 ], ..., [ aM, bN ])
-#  #
-#  # (cross product of K lists, not just two as shown above)
-#  #
-#  sub allCombinations {
-#      my @sets = @_;
-#      if (@sets == 1) {
-#  	return map { [ $_ ] } @{ $sets[0] };
-#      } else {
-#  	my @combinations = allCombinations(@sets[1..$#sets]);
-#  	my @result;
-#  	for my $first (@{ $sets[0] }) {
-#  	    push @result, map { [ $first, @$_ ] } @combinations;
-#  	}
-#  	return @result;
-#      }
-#  }
 
 # pref(nonref unit) = ...
 # pref(dot(a,b...)) = MIN(pref(a),pref(b),...)
@@ -283,20 +274,11 @@ sub range_score {
 }
 
 sub score {
-    my $v = shift;
-    my $pref = get_pref($v->[1]);
-    my $range_score = range_score($v);
-    return $pref * $range_score; # Simple gate for now
-}
-
-sub score_comb {
-    my ($val, $units) = @_;
-    my $score = range_score([ $val, [ 'dot', @$units ] ]);
-    return 0 if ! $score;
-    for my $unit (@$units) {
-	$score *= get_pref($unit);
-    }
-    return $score;
+    my ($val, $unit, $top) = @_;
+    my $pref = get_pref($unit);
+    return $pref if @$top == 0; # 782/sec
+    my $range_score = range_score([ $val, [ 'dot', @$top ] ]);
+    return $pref * $range_score;
 }
 
 1;

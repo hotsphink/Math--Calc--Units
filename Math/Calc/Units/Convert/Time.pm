@@ -26,10 +26,19 @@ use vars qw(%units %pref %ranges %total_unit_map);
 	    week => [ 1, 4 ],
 );
 
+sub major_pref {
+    return 2;
+}
+
+sub major_variants {
+    my ($self) = @_;
+    return grep { ($_ ne 'default') && ($_ ne 'week') } keys %ranges;
+}
+
 # Return a list of the variants of the canonical unit of time: 'sec'
 sub variants {
-#    my ($self) = @_;
-    return keys %units;
+    my ($self, $base) = @_;
+    return (keys %units), map { "${_}sec" } $self->get_prefixes();
 }
 
 sub unit_map {

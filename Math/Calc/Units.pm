@@ -1,5 +1,3 @@
-use lib '/home/sfink/units';
-
 package Units::Calc;
 use Units::Calc::Grammar;
 use Units::Calc::Convert;
@@ -61,7 +59,6 @@ sub dot {
 }
 
 package Units::Calc;
-use Data::Dumper;
 
 # Poor-man's tokenizer
 sub tokenize {
@@ -73,6 +70,7 @@ sub tokenize {
     return \@tokens, \@types;
 }
 
+# compute : string -> <value,unit>
 sub compute {
     my ($vals, $types) = tokenize(shift());
     my $lexer = sub {
@@ -93,6 +91,7 @@ sub compute {
 };
 
 if (!(caller)) {
+    eval 'use Data::Dumper';
     print Dumper(compute(join('',@ARGV)));
 }
 

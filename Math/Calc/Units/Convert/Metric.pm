@@ -55,6 +55,13 @@ use vars qw(%niceSmallMetric %metric %pref %abbrev $metric_prefix_test);
 # get_abbrev, and get_prefix) are the only things that are specific to
 # this class. All other methods can be used unchanged in subclasses.
 
+sub pref_score {
+    my ($self, $unit) = @_;
+    my $prefix = $self->get_prefix($unit);
+    $unit = substr($unit, length($prefix || ""));
+    return $self->prefix_pref($prefix) * $self->SUPER::pref_score($unit);
+}
+
 sub get_metric {
     my ($self, $what) = @_;
     return $metric{$what};
@@ -76,6 +83,10 @@ sub get_prefix {
     }
 }
 
+sub get_prefixes {
+    return keys %metric;
+}
+
 sub get_abbrev_prefix {
     my ($self, $what) = @_;
     my $prefix = substr($what, 0, 1);
@@ -84,6 +95,16 @@ sub get_abbrev_prefix {
     } else {
 	return;
     }
+}
+
+sub variants {
+    my ($self, $base) = @_;
+    my @main = $self->SUPER::variants($base);
+    my @variants;
+    for my $u (@main) {
+	push @variants, $u, map { "$_$u" } $self->get_prefixes();
+    }
+    return @variants;
 }
 
 sub prefix_pref {

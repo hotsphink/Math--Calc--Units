@@ -9,12 +9,26 @@ sub import {
     }
 }
 
+sub major_pref {
+    return 0;
+}
+
+sub major_variants {
+    return ();
+}
+
 sub singular {
     return; # Could not handle specially
 }
 
 sub unit_map {
     return {};
+}
+
+sub variants {
+    my ($self, $base) = @_;
+    my $map = $self->unit_map();
+    return ($base, keys %$map);
 }
 
 sub same {
