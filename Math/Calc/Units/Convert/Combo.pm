@@ -1,5 +1,5 @@
-package Units::Calc::Convert::Combo;
-use base 'Units::Calc::Convert::Base2Metric';
+package Math::Calc::Units::Convert::Combo;
+use base 'Math::Calc::Units::Convert::Base2Metric';
 use strict;
 use vars qw(%units %metric_units %prefixable_metric_units %total_unit_map);
 use vars qw(%ranges %pref);

@@ -1,9 +1,8 @@
 use ExtUtils::MakeMaker;
 
 WriteMakefile(
-    'NAME'	=> 'Units::Calc',
-    'VERSION_FROM' => 'Units/Calc.pm', # finds $VERSION
-    'PMLIBDIRS' => [ 'Units/Calc' ],
+    'NAME'	=> 'Math::Calc::Units',
+    'VERSION_FROM' => 'Units.pm', # finds $VERSION
     'EXE_FILES' => [ 'script/ucalc' ],
     'XS' => {},
 );

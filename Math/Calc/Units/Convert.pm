@@ -1,10 +1,10 @@
-package Units::Calc::Convert;
+package Math::Calc::Units::Convert;
 use base 'Exporter';
 use strict;
 use vars qw(@EXPORT_OK);
 BEGIN { @EXPORT_OK = qw(convert reduce canonical find_top); };
 
-use Units::Calc::Convert::Multi qw(to_canonical);
+use Math::Calc::Units::Convert::Multi qw(to_canonical);
 
 # convert : value x unit -> value
 #

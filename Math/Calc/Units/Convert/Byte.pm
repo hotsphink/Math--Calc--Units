@@ -1,5 +1,5 @@
-package Units::Calc::Convert::Byte;
-use base 'Units::Calc::Convert::Base2Metric';
+package Math::Calc::Units::Convert::Byte;
+use base 'Math::Calc::Units::Convert::Base2Metric';
 use strict;
 use vars qw(%units %pref %ranges %total_unit_map);
 

@@ -1,4 +1,4 @@
-package Units::Calc::Compute;
+package Math::Calc::Units::Compute;
 use base 'Exporter';
 use vars qw(@EXPORT_OK);
 @EXPORT_OK = qw(compute
@@ -6,14 +6,14 @@ use vars qw(@EXPORT_OK);
 		unit_mult unit_divide unit_power);
 use strict;
 
-use Units::Calc::Convert qw(reduce);
-use Units::Calc::Rank qw(render_unit);
-use Units::Calc::Convert::Base;
-require Units::Calc::Grammar;
+use Math::Calc::Units::Convert qw(reduce);
+use Math::Calc::Units::Rank qw(render_unit);
+use Math::Calc::Units::Convert::Base;
+require Math::Calc::Units::Grammar;
 
 sub equivalent {
     my ($u, $v) = @_;
-    return Units::Calc::Convert::Base->same($u, $v);
+    return Math::Calc::Units::Convert::Base->same($u, $v);
 }
 
 # All these assume the values are in canonical units.
@@ -80,7 +80,7 @@ sub unit_power {
     return $u;
 }
 
-package Units::Calc::Compute;
+package Math::Calc::Units::Compute;
 
 # Poor-man's tokenizer
 sub tokenize {
@@ -107,7 +107,7 @@ sub compute {
         return ('', undef);
     };
 
-    my $parser = new Units::Calc::Grammar;
+    my $parser = new Math::Calc::Units::Grammar;
 
     my $v = 
         $parser->YYParse(yylex => $lexer,

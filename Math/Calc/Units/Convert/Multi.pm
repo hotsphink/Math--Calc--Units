@@ -1,4 +1,4 @@
-package Units::Calc::Convert::Multi;
+package Math::Calc::Units::Convert::Multi;
 use base 'Exporter';
 use vars qw(@EXPORT_OK);
 BEGIN {
@@ -7,15 +7,15 @@ BEGIN {
 		    major_pref range_score pref_score
 		    get_class);
 };
-require Units::Calc::Convert::Time;
-require Units::Calc::Convert::Byte;
-require Units::Calc::Convert::Combo;
+require Math::Calc::Units::Convert::Time;
+require Math::Calc::Units::Convert::Byte;
+require Math::Calc::Units::Convert::Combo;
 use strict;
 use vars qw(@UnitClasses);
 
-@UnitClasses = qw(Units::Calc::Convert::Time
-		  Units::Calc::Convert::Byte
-		  Units::Calc::Convert::Combo);
+@UnitClasses = qw(Math::Calc::Units::Convert::Time
+		  Math::Calc::Units::Convert::Byte
+		  Math::Calc::Units::Convert::Combo);
 
 # to_canonical : unit -> value
 #
@@ -54,7 +54,7 @@ sub name_to_canonical {
     my ($unitName) = @_;
     
     # First, check for compound units
-    if (my $v = Units::Calc::Convert::Combo->lookup_compound($unitName)) {
+    if (my $v = Math::Calc::Units::Convert::Combo->lookup_compound($unitName)) {
 	return @$v;
     }
 
@@ -63,10 +63,10 @@ sub name_to_canonical {
 	    return ($val, $base);
 	}
     }
-    return Units::Calc::Convert::Base->to_canonical($unitName);
+    return Math::Calc::Units::Convert::Base->to_canonical($unitName);
 }
 
-# get_class : unitName -> "Units::Calc::Convert::<unitClass>"
+# get_class : unitName -> "Math::Calc::Units::Convert::<unitClass>"
 #
 sub get_class {
     my ($unitName) = @_;
@@ -76,7 +76,7 @@ sub get_class {
 	next if ! defined $canon_unit;
 	return $uclass if $canon_unit eq $canon;
     }
-    return 'Units::Calc::Convert::Base';
+    return 'Math::Calc::Units::Convert::Base';
 }
 
 sub simple_convert {

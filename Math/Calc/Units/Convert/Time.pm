@@ -1,5 +1,5 @@
-package Units::Calc::Convert::Time;
-use base 'Units::Calc::Convert::Metric';
+package Math::Calc::Units::Convert::Time;
+use base 'Math::Calc::Units::Convert::Metric';
 use strict;
 use vars qw(%units %pref %ranges %total_unit_map);
 

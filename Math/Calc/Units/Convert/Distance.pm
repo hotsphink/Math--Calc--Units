@@ -1,5 +1,5 @@
-package Units::Calc::Convert::Distance;
-use base 'Units::Calc::Convert::Metric';
+package Math::Calc::Units::Convert::Distance;
+use base 'Math::Calc::Units::Convert::Metric';
 use strict;
 use vars qw(%units %pref);
 

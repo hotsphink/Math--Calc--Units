@@ -1,8 +1,8 @@
-package Units::Calc;
+package Math::Calc::Units;
 
-use Units::Calc::Compute qw(compute);
-use Units::Calc::Rank qw(render render_unit choose_juicy_ones);
-use Units::Calc::Convert;
+use Math::Calc::Units::Compute qw(compute);
+use Math::Calc::Units::Rank qw(render render_unit choose_juicy_ones);
+use Math::Calc::Units::Convert;
 
 use base 'Exporter';
 use vars qw($VERSION @EXPORT_OK);
@@ -17,7 +17,7 @@ use strict;
 sub calc ($;$) {
     my ($expr, $exact) = @_;
     my $v = compute($expr);
-    return $exact ? render($v) : ($v->[0], render_unit($v->[1]));
+    return $exact ? ($v->[0], render_unit($v->[1])) : render($v);
 }
 
 # readable : string -> ( string )
@@ -32,8 +32,8 @@ sub convert ($$;$) {
     my ($expr, $units, $exact) = @_;
     my $v = compute($expr);
     my $u = compute("# $units");
-    my $c = Units::Calc::Convert::convert($v, $u->[1]);
-    return $exact ? render($c) : ($c->[0], render_unit($c->[1]));
+    my $c = Math::Calc::Units::Convert::convert($v, $u->[1]);
+    return $exact ? ($c->[0], render_unit($c->[1])) : render($c);
 }
 
 # equal : string x string -> boolean
@@ -42,7 +42,7 @@ sub equal {
     my ($u, $v) = @_;
     $u = compute($u);
     $v = compute($v);
-    $v = Units::Calc::Convert::convert($v, $u->[1]);
+    $v = Math::Calc::Units::Convert::convert($v, $u->[1]);
     $u = $u->[0];
     $v = $v->[0];
     return 1 if ($u == 0) && abs($v) < EPSILON;
@@ -57,11 +57,11 @@ if (!(caller)) {
 
 =head1 NAME
 
-Units::Calc - Human-readable unit-aware calculator
+Math::Calc::Units - Human-readable unit-aware calculator
 
 =head1 SYNOPSIS
 
-    use Units::Calc qw(calc readable convert equal);
+    use Math::Calc::Units qw(calc readable convert equal);
 
     print "It will take ".calc("10MB/(384Kbps)")." to download\n";
 
@@ -73,7 +73,7 @@ Units::Calc - Human-readable unit-aware calculator
 
 =head1 DESCRIPTION
 
-C<Units::Calc> is a simple calculator that keeps track of units. It
+C<Math::Calc::Units> is a simple calculator that keeps track of units. It
 currently handles combinations of byte sizes and duration only,
 although adding any other multiplicative types is easy. Any unknown
 type is treated as a unique user type (with some effort to map English
@@ -85,7 +85,7 @@ will only produce C<"3 byte">, but C<"3 byte / sec"> produces the
 original along with C<"180 byte / minute">, C<"10.55 kilobyte / hour">,
 etc.
 
-The C<Units::Calc> interface only provides for string-based
+The C<Math::Calc::Units> interface only provides for string-based
 computations, which could result in a large loss of precision for some
 applications. If you need the exact result, you may pass in an extra
 parameter C<'exact'> to C<calc> or C<convert>, causing them to return a

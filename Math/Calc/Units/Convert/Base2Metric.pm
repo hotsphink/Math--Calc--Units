@@ -1,5 +1,5 @@
-package Units::Calc::Convert::Base2Metric;
-use base 'Units::Calc::Convert::Metric'; # Overrides
+package Math::Calc::Units::Convert::Base2Metric;
+use base 'Math::Calc::Units::Convert::Metric'; # Overrides
 use strict;
 
 use vars qw(%metric_base2 %abbrev $metric_prefix_test %pref);

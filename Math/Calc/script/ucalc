@@ -1,5 +1,5 @@
 #!/usr/bin/perl -w
-use Units::Calc qw(convert readable calc);
+use Math::Calc::Units qw(convert readable calc);
 
 sub usage {
     my ($msg, $bad) = @_;

@@ -7,7 +7,7 @@
 #             ANY CHANGE MADE HERE WILL BE LOST !
 #
 ####################################################################
-package Units::Calc::Grammar;
+package Math::Calc::Units::Grammar;
 use vars qw ( @ISA );
 use strict;
 
@@ -491,7 +491,7 @@ sub _Parse {
 
 #line 3 "Grammar.y"
 
-    use Units::Calc::Compute qw(plus minus mult divide power);
+    use Math::Calc::Units::Compute qw(plus minus mult divide power);
 
 
 sub new {

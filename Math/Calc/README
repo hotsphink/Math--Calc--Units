@@ -9,7 +9,7 @@ It won't take *that* long to download this 650MB cd image over Mom's
 What's the throughput for random 8KB reads, using a hard disk with
 20MB/sec transfers and an average access latency of 15ms?
 
-    % perl -MUnits::Calc=readable -le 'print foreach (readable("8KB / (8KB/(20MB/sec) + 15ms)"))'
+    % perl -MMath::Calc::Units=readable -le 'print foreach (readable("8KB / (8KB/(20MB/sec) + 15ms)"))'
 
     532.3 byte / millisec
     1.785 gigabyte / hour
@@ -29,7 +29,7 @@ Installing:
 
 Documentation:
 
-    perldoc Units::Calc
+    perldoc Math::Calc::Units
 
 Author:
 

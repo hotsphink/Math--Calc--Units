@@ -1,4 +1,4 @@
-package Units::Calc::Convert::Base;
+package Math::Calc::Units::Convert::Base;
 use strict;
 
 sub major_pref {

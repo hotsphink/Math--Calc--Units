@@ -1,10 +1,10 @@
-package Units::Calc::Rank;
+package Math::Calc::Units::Rank;
 use base 'Exporter';
 use vars qw(@EXPORT_OK);
 BEGIN { @EXPORT_OK = qw(choose_juicy_ones render render_unit); }
 
-use Units::Calc::Convert qw(convert canonical);
-use Units::Calc::Convert::Multi qw(variants major_variants major_pref pref_score range_score get_class);
+use Math::Calc::Units::Convert qw(convert canonical);
+use Math::Calc::Units::Convert::Multi qw(variants major_variants major_pref pref_score range_score get_class);
 use strict;
 
 sub display_printable {

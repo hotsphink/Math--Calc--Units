@@ -1,7 +1,7 @@
-# To process: yapp -s -m Units::Calc::Grammar Grammar.y
+# To process: yapp -s -m Math::Calc::Units::Grammar Grammar.y
 
 %{
-    use Units::Calc::Compute qw(plus minus mult divide power);
+    use Math::Calc::Units::Compute qw(plus minus mult divide power);
 %}
 
 # Lowest

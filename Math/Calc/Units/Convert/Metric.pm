@@ -1,5 +1,5 @@
-package Units::Calc::Convert::Metric;
-use base 'Units::Calc::Convert::Base';
+package Math::Calc::Units::Convert::Metric;
+use base 'Math::Calc::Units::Convert::Base';
 use strict;
 
 use vars qw(%niceSmallMetric %metric %pref %abbrev $metric_prefix_test);

@@ -6,8 +6,8 @@ use lib '/home/sfink/units'; # Just so I can use perldb
 ######################### We start with some black magic to print on failure.
 
 BEGIN { $| = 1; print "1..39\n"; }
-END { print "not ok 1 - failed to use Units::Calc\n" unless $loaded; }
-use Units::Calc qw(calc readable convert equal);
+END { print "not ok 1 - failed to use Math::Calc::Units\n" unless $loaded; }
+use Math::Calc::Units qw(calc readable convert equal);
 $loaded = 1;
 $STATUS = 0;
 print "ok 1 - initialization\n";
