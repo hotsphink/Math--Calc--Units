@@ -45,4 +45,4 @@ assert(compute("10Kbytes/min"), [ 10*1024/60, [ 'per', 'byte', 'sec' ] ]);
 
 $v = [ 1, 'Mbps' ];
 $w = convert($v, [ 'per', 'byte', 'sec' ]);
-assert($w, [ 1024**2, [ 'per', 'byte', 'sec' ]]);
+assert($w, [ 1024**2/8, [ 'per', 'byte', 'sec' ]]);

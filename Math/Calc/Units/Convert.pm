@@ -12,10 +12,11 @@ sub add_unitSet {
     print STDERR "Registering $package\n";
 }
 
+# Multi must be first, so that later units can canonicalize the sub-units
+use Units::Calc::Convert::Multi register => \&add_unitSet;
 use Units::Calc::Convert::Time register => \&add_unitSet;
 #use Units::Calc::Convert::Distance register => \&add_unitSet;
 use Units::Calc::Convert::Byte register => \&add_unitSet;
-use Units::Calc::Convert::Multi register => \&add_unitSet;
 
 sub apply_all ($) {
     my $sub = shift;
@@ -27,12 +28,24 @@ sub apply_all ($) {
 sub apply_until ($) {
     my $sub = shift;
     foreach my $unitType (@Registry) {
-	if (my $tmp = $sub->($unitType)) {
-	    return $tmp;
+	if (wantarray) {
+	    my @tmp = $sub->($unitType);
+	    return @tmp if @tmp;
+	} else {
+	    my $tmp = $sub->($unitType);
+	    return $tmp if $tmp;
 	}
     }
 
     return;
+}
+
+sub to_canonical ($) {
+    my $unit = shift;
+    my @tmp = apply_until(sub { shift()->to_canonical($unit) });
+    @tmp = ( [1, $unit] ) if not @tmp;
+    return @tmp if wantarray;
+    return $tmp[0];
 }
 
 # Use the Orcish Maneuver to memoize canonical units, computed by
@@ -41,7 +54,9 @@ sub apply_until ($) {
 use vars qw(%CANON_UNIT_MAP);
 sub canonical_unit {
     my ($u) = @_;
-    $CANON_UNIT_MAP{$u} ||= apply_until(sub { shift()->to_canonical($u); });
+    return $_ if $_ = $CANON_UNIT_MAP{$u};
+    my $v = apply_until(sub { shift()->to_canonical($u); });
+    $CANON_UNIT_MAP{$u} = $v->[1];
     return $CANON_UNIT_MAP{$u};
 }
 
@@ -176,23 +191,24 @@ sub canonical {
     my @top = _find_top($v->[1]);
     my @bottom = _find_top($v->[1], 'invert');
 
+    my $recurse = 0;
+
     # 2. Canonicalize to PROD(M)/PROD(N)
     my $val = $v->[0];
     my $unit = 'unit';
     foreach my $u (@top) {
-        my $c = simple_convert([ 1, $u ], canonical_unit($u));
-	$c ||= [ 1, $u ];
+        my $c = to_canonical($u);
 	$val *= $c->[0];
 	$unit = _unit_mult($unit, $c->[1]);
     }
     foreach my $u (@bottom) {
-        my $c = simple_convert([ 1, $u ], canonical_unit($u));
-	$c ||= [ 1, $u ];
+        my $c = to_canonical($u);
 	$val /= $c->[0];
 	$unit = _unit_divide($unit, $c->[1], $do_reduce);
     }
 
-    return [ $val, $unit ];
+    $v = [ $val, $unit ];
+    return $recurse ? canonical($v, $do_reduce) : $v;
 }
 
 sub reduce {

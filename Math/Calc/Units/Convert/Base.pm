@@ -63,11 +63,11 @@ sub simple_convert {
     }
 }
 
+# to_canonical : unit -> value
 sub to_canonical {
     my ($self, $unit) = @_;
     my $canon = $self->canonical_unit();
-    return $canon if $self->simple_convert([ 1, $unit ], $canon);
-    return;
+    return $self->simple_convert([ 1, $unit ], $canon);
 }
 
 1;
