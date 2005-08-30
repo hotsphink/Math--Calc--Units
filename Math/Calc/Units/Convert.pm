@@ -23,7 +23,7 @@ sub convert {
 
     my $canon_from = canonical($from);
     my $canon_to = canonical($to);
-    
+
     die "conversion between incompatible units"
       if not same_units($canon_from->[1], $canon_to->[1]);
 

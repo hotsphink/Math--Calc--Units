@@ -118,9 +118,9 @@ sub major_pref {
 }
 
 sub range_score {
-    my ($val, $unitName, $allow_out_of_range) = @_;
+    my ($val, $unitName) = @_;
     die if ref $unitName;
-    return get_class($unitName)->range_score($val, $unitName, $allow_out_of_range);
+    return get_class($unitName)->range_score($val, $unitName);
 }
 
 sub pref_score {

@@ -9,40 +9,61 @@ use strict;
 
 # choose_juicy_ones : value -> ( value )
 #
+# Pick the best-sounding units for the given value, and compute the
+# resulting magnitude and score. The total number returned is based on
+# a magical formula that examines the rates of decay of the scores.
+#
 sub choose_juicy_ones {
     my ($v, $verbose) = @_;
-    my @variants = rank_variants($v, 0, $verbose); # ( < {old=>new}, score > )
-    if (@variants == 0) {
-	@variants = rank_variants($v, 1, $verbose);
-	pop(@variants) while @variants > 5;
-    }
+
+    # Collect the variants of the value, together with their scores.
+    my @variants = rank_variants($v, $verbose); # ( < {old=>new}, score > )
+
+    # Remove duplicates
     my %variants; # To remove duplicates: { id => [ {old=>new}, score ] }
     for my $variant (@variants) {
 	my $id = join(";;", values %{ $variant->[0] });
 	$variants{$id} = $variant;
     }
 
-    my @juicy;
-
+    my @options;
     for my $variant (values %variants) {
 	my ($map, $score) = @$variant;
 	my %copy;
-	while (my ($unit, $count) = each %{ $v->[1] }) {
+        my ($magnitude, $units) = @$v;
+	while (my ($unit, $count) = each %$units) {
 	    $copy{$map->{$unit}} = $count;
 	}
-	push @juicy, [ $score, convert($v, \%copy) ];
+	push @options, [ $score, convert($v, \%copy) ];
     }
 
-    return map { $_->[1] } sort { $b->[0] <=> $a->[0] } @juicy;
+    # Pick up to five of the highest scores. If any score is less than
+    # 1/10 of the previous score, or 1/25 of the highest score, then
+    # don't bother returning it (or anything worse than it.)
+    my @juicy;
+    my $first;
+    my $prev;
+    foreach (sort { $b->[0] <=> $a->[0] } @options) {
+        my ($score, $val) = @$_;
+#        print "prev: " . ($prev / $score) . "\n" if defined $prev;
+        last if (defined $prev && ($prev / $score) > 8);
+#        print "first: " . ($first / $score) . "\n" if defined $first;
+        last if (defined $first && ($first / $score) > 25);
+        push @juicy, $val;
+        $first = $score unless defined $first;
+        $prev = $score;
+        last if @juicy == 5;
+    }
+
+    return @juicy;
 }
 
 # rank_variants : <amount,unit> -> ( < map, score > )
 # where map : {original unit => new unit}
 #
 sub rank_variants {
-    my ($v, $keepall, $verbose) = @_;
+    my ($v, $verbose) = @_;
 
-    # I. Convert to canonical form
     $v = canonical($v);
 
     my ($mag, $count) = @$v;
@@ -52,7 +73,7 @@ sub rank_variants {
 	@rangeable = keys %$count;
     }
 
-    return rank_power_variants($mag, \@rangeable, $count, $keepall, $verbose);
+    return rank_power_variants($mag, \@rangeable, $count, $verbose);
 }
 
 sub choose_major {
@@ -67,7 +88,7 @@ sub choose_major {
 # $top is the set of units that should be range checked.
 #
 sub rank_power_variants {
-    my ($mag, $top, $power, $keepall, $verbose) = @_;
+    my ($mag, $top, $power, $verbose) = @_;
 
     # Recursive case: we have multiple units left, so pick one to be
     # the "major" unit and select the best combination of the other
@@ -90,7 +111,7 @@ sub rank_power_variants {
 	    my $cval = $mag / $mult ** $power->{$major};
 
 	    print "\n --- for $variant ---\n" if $verbose;
-	    my @r = rank_power_variants($cval, $top, \%powerless, $keepall, $verbose);
+	    my @r = rank_power_variants($cval, $top, \%powerless, $verbose);
 	    next if @r == 0;
 
 	    my $best = $r[0];
@@ -137,23 +158,27 @@ sub rank_power_variants {
         my @vtop = @subtop;
         push @vtop, $variant if $add_variant;
 
-	my $score = score($minimag, $variant, \@vtop, $keepall);
-	print "($mag $unit) score $score:\t $minimag $variant\n"
+	my $score = score($minimag, $variant, \@vtop);
+	printf "($mag $unit) score %.6f:\t $minimag $variant\n", $score
 	    if $verbose;
-	next if (! $keepall) && ($score == 0);
 	push @choices, [ $score, $variant ];
     }
 
     @choices = sort { $b->[0] <=> $a->[0] } @choices;
     return () if @choices == 0;
-    @choices = ($choices[0]) if not $keepall; # Single best one
 
     return map { [ {$unit => $_->[1]}, $_->[0] ] } @choices;
 }
 
+# Return a string representing a given set of units. The input is a
+# map from unit names to their powers (eg lightyears/sec/sec would be
+# represented as { lightyears => 1, sec => -2 }); the output is a
+# corresponding string such as "lightyears / sec**2".
 sub render_unit {
     my $units = shift;
 
+    # Positive powers just get appended together with spaces between
+    # them.
     my $str = '';
     while (my ($name, $power) = each %$units) {
 	if ($power > 0) {
@@ -163,6 +188,8 @@ sub render_unit {
     }
     chop($str);
 
+    # Negative powers will be placed after a "/" character, because
+    # they're in the denominator.
     my $botstr = '';
     while (my ($name, $power) = each %$units) {
 	if ($power < 0) {
@@ -172,6 +199,7 @@ sub render_unit {
     }
     chop($botstr);
 
+    # Combine the numerator and denominator appropriately.
     if ($botstr eq '') {
 	return $str;
     } elsif ($botstr =~ /\s/) {
@@ -243,22 +271,26 @@ sub render {
 # Takes max score for listed units.
 #
 sub max_range_score {
-    my ($mag, $units, $allow_out_of_range) = @_;
+    my ($mag, $units) = @_;
     my $score = 0;
 
     foreach my $name (@$units) {
-	my $uscore = range_score($mag, $name, $allow_out_of_range);
+	my $uscore = range_score($mag, $name);
 	$score = $uscore if $score < $uscore;
     }
 
     return $score;
 }
 
+# Arguments:
+#  $mag - The magnitude of the value (in the given unit)
+#  $unit - The unit to use to figure out what sounds best
+#  $top - ...I'll get back to you...
 sub score {
-    my ($mag, $unit, $top, $allow_out_of_range) = @_;
+    my ($mag, $unit, $top) = @_;
     my @rangeable = @$top ? @$top : ($unit);
     my $pref = pref_score($unit);
-    my $range_score = max_range_score($mag, \@rangeable, $allow_out_of_range);
+    my $range_score = max_range_score($mag, \@rangeable);
     return $pref * $range_score;
 }
 

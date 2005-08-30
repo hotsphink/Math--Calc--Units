@@ -17,9 +17,9 @@ sub singular {
     local $_ = shift;
 
     return $_ unless /s$/;
-    return $1 if /^(.*[^e])s/;  # doesn't end in es => just chop off the s
-    return $1 if /^(.*ch)es/;   # eg inches -> inch
-    return $1 if /^(.*[aeiou][^aeiou]e)s/; # scales -> scale
+    return $1 if /^(.*[^e])s$/;  # doesn't end in es => just chop off the s
+    return $1 if /^(.*(ch|sh))es$/;   # eg inches -> inch
+    return $1 if /^(.*[aeiou][^aeiou]e)s$/; # scales -> scale
     chop; return $_; # Chop off the s
 }
 
@@ -38,6 +38,7 @@ sub same {
     my ($self, $u, $v) = @_;
     return 0 if keys %$u != keys %$v;
     while (my ($name, $power) = each %$u) {
+        return 0 if ! exists $v->{$name};
 	return 0 if $v->{$name} != $power;
     }
     return 1;
@@ -126,37 +127,24 @@ sub spread {
 
 # range_score : amount x unitName -> score
 #
+# Returns 1 if the value is in range for the unit, 0.1 if the value is
+# infinitely close to being in range, and decaying to 0.001 as the
+# value approaches infinitely far away from the range.
+#
+# For the outside of range values, I convert to log space (so 1/400 is
+# just as far away from 1 as 400 is). I then treat the allowed range
+# as a one standard deviation wide segment of a normal distribution,
+# and use appropriate modifiers to make the result range from 0.001 to
+# 0.1.
+#
+# The above formula was carefully chosen from thousands of
+# possibilities, by picking things at random and scribbling them down
+# on a piece of paper, then pouring sparkling apple cider all over and
+# using the one that was still readable.
+#
+# Ok, not really. Just pretend that I went to that much trouble.
+#
 sub range_score {
-    my ($self, $val, $unitName, $allow_out_of_range) = @_;
-    if ($allow_out_of_range) {
-	return $self->norm_range_score($val, $unitName);
-    }
-    my $ranges = $self->get_ranges();
-    my $range = $ranges->{$unitName} || $ranges->{default};
-    return 0 if $val < $range->[0];
-    return 1 if ! defined $range->[1];
-    return 0 if $val > $range->[1];
-    return 1;
-}
-
-sub _sillylog {
-    my $x = shift;
-    return log($x) if $x;
-    return log(1e-50);
-}
-
-# norm_range_score : amount x unitName -> score
-#
-# This is for use when nothing is found in range, and you want to pick
-# the best of the bad. For no good reason, I convert to log space (so
-# 1/400 is just as far away from 1 as 400), and use a normal
-# distribution where the allowed range is the 1 standard deviation
-# range.
-#
-# Oh, and now I add in a bonus 0.1 to give the preference multiplier
-# something to work with. Does wonders for shooting down centiseconds.
-#
-sub norm_range_score {
     my ($self, $val, $unitName) = @_;
     my $ranges = $self->get_ranges();
     my $range = $ranges->{$unitName} || $ranges->{default};
@@ -184,7 +172,16 @@ sub norm_range_score {
 
     my $n = ($val - $mean) / $stddev; # Normalized value
 
-    return exp(-$n**2/2) + 0.1;
+    our $mulconst;
+    $mulconst ||= 0.999 * exp(1/8);
+
+    return 0.001 + $mulconst * exp(-$n**2/2);
+}
+
+sub _sillylog {
+    my $x = shift;
+    return log($x) if $x;
+    return log(1e-50);
 }
 
 # pref_score : unitName -> score
@@ -214,7 +211,7 @@ sub render_unit {
 
 sub render {
     my ($self, $val, $name, $power) = @_;
-    return sprintf("%.4g ",$val).$self->render_unit($name, $power);
+    return sprintf("%.5g ",$val).$self->render_unit($name, $power);
 }
 
 sub construct {

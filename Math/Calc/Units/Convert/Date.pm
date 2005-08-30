@@ -49,23 +49,26 @@ sub construct {
     }
 
     return unless $constructor eq 'date';
-    
+
     # Accept a very limited range of formats.
 
-    # Always assume GMT if not given. Currently, do not handle timezones
+    # Always assume GMT if not given. Currently, do not handle timezones.
     $args =~ s/\s+GMT\s+$//;
 
-    my ($Mon, $d, $y, $h, $m, $s, $M);
+    my ($Mon, $d, $y, $h, $m, $s, $tz, $M);
+    $tz = 'GMT';
 
-    # Format 1: Weekday Mon DD HH:MM:SS YYYY (as returned by gmtime)
-    # except the weekday is optional and ignored if present
+    # Format 1: [Weekday] Mon DD HH:MM:SS [Timezone] YYYY
+    # (as returned by gmtime and the 'date' command)
+    # The weekday is ignored if given. The timezone is currently ignored.
     if ($args =~ /^((?:\w\w\w\s+)?)
                    (\w\w\w)\s*
                    (\d+)\s+
                    (\d+):(\d+)[:.](\d+)\s+
+                   (\w+)?\s*
                    (\d\d\d\d)$/x)
     {
-        (undef, $Mon, $d, $h, $m, $s, $y) = ($1, $2, $3, $4, $5, $6, $7);
+        (undef, $Mon, $d, $h, $m, $s, $tz, $y) = ($1, $2, $3, $4, $5, $6, $7, $8);
 
     # Format 2: Mon DD YYYY
     } elsif ($args =~ /^(\w\w\w)[\s-]*
@@ -100,6 +103,10 @@ sub construct {
             $M++;
         }
         die "Unparseable month '$Mon'" if $M > 11;
+    }
+
+    if (defined($tz) && $tz ne 'GMT') {
+        warn "Timezones not supported. Assuming GMT.\n";
     }
 
     my $timestamp = timegm($s, $m, $h, $d, $M, $y-1900);

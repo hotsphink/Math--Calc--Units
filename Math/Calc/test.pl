@@ -3,7 +3,7 @@
 
 ######################### We start with some black magic to print on failure.
 
-BEGIN { $| = 1; print "1..53\n"; }
+BEGIN { $| = 1; print "1..54\n"; }
 END { print "not ok 1 - failed to use Math::Calc::Units\n" unless $loaded; }
 use Math::Calc::Units qw(calc readable convert equal);
 $loaded = 1;
@@ -76,7 +76,7 @@ ok(equal("1byte/Kbps", "(1/(1024/8)) sec"), "complex type on bottom");
 ok((grep { /./ } readable("10MB / 384Kbps")), "doc example 1");
 ok((grep { /./ } readable("8KB / (8KB/(20MB/sec) + 15ms)")), "doc example 2");
 ok((grep { /./ } readable("((1sec/20MB) + 15ms/8KB) ** -1")), "doc example 3");
-ok(convert("2MB/sec", "GB/week") =~ m!1181 GB / week!, "doc example 4");
+ok(convert("2MB/sec", "GB/week") =~ m!1181.2 GB / week!, "doc example 4");
 ok((grep { /714 angel/ } readable("42 angels/pinhead * 17 pinheads")), "doc example 5");
 
 # 1.02 Fixes
@@ -101,7 +101,10 @@ ok(equal('@1003622400+157616sec', 'timestamp(1003780016)'), "timestamp+sec=sec")
 
 ok(readable('3 god/person * 1 angel'), "recursion bug");
 
-# Tentative 1.03 plans
+# 1.03 Fixes
+ok((readable('1062055440 byte'))[0] =~ /gigabyte/, "reported complaint");
+
+# Tentative future plans
 #ok(equal("4min 3sec", "4min + 3 sec"), "M min S sec input");
 
 exit($STATUS);
