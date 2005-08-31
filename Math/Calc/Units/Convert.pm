@@ -17,8 +17,6 @@ use Math::Calc::Units::Convert::Multi qw(to_canonical);
 sub convert {
     my ($from, $unit) = @_;
 
-#      my $from = [ $v->[0], canonical_form($v->[1]) ];
-#      my $to = [ 1, canonical_form($unit) ];
     my $to = [ 1, $unit ];
 
     my $canon_from = canonical($from);
@@ -45,7 +43,6 @@ sub same_units {
 sub canonical {
     my ($v) = @_;
 
-    $DB::single = 1 if not ref $v->[1];
     my $c = to_canonical($v->[1]);
     my $w = [ $v->[0] * $c->[0], $c->[1] ];
     return $w;
