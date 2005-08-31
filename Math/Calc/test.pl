@@ -3,7 +3,7 @@
 
 ######################### We start with some black magic to print on failure.
 
-BEGIN { $| = 1; print "1..54\n"; }
+BEGIN { $| = 1; print "1..60\n"; }
 END { print "not ok 1 - failed to use Math::Calc::Units\n" unless $loaded; }
 use Math::Calc::Units qw(calc readable convert equal);
 $loaded = 1;
@@ -103,6 +103,14 @@ ok(readable('3 god/person * 1 angel'), "recursion bug");
 
 # 1.03 Fixes
 ok((readable('1062055440 byte'))[0] =~ /gigabyte/, "reported complaint");
+
+# 1.04 Additions
+ok((readable('8000 bytes', abbreviate => 0))[0] =~ /\bkilobyte\b/, "FR: abbreviations (pretest)");
+ok((readable('8000 bytes', abbreviate => 1))[0] =~ /\bkB\b/, "FR: abbreviations");
+ok((! grep { /\bkilosec\b/ } readable('45000 sec')), "kilosec avoidance");
+ok((! grep { /\bks\b/ } readable('45000 sec', abbreviate => 1)), "ks avoidance");
+ok(equal("8 kiloseconds", "8000 sec"), "kilosecond handling");
+ok(equal("8 ks", "8000 sec"), "ks handling");
 
 # Tentative future plans
 #ok(equal("4min 3sec", "4min + 3 sec"), "M min S sec input");
