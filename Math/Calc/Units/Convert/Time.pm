@@ -40,7 +40,7 @@ sub major_variants {
 # Return a list of the variants of the canonical unit of time: 'sec'
 sub variants {
     my ($self, $base) = @_;
-    return 'sec', (keys %units), map { "${_}sec" } $self->get_prefixes();
+    return 'sec', (keys %units), map { "${_}sec" } $self->get_prefixes({ small => 1 });
 }
 
 sub unit_map {
@@ -53,6 +53,8 @@ sub unit_map {
 
 sub canonical_unit { return 'sec'; }
 
+sub abbreviated_canonical_unit { return 's'; }
+
 # demetric : string => [ mult, base ]
 #
 # Must override here to avoid megahours or milliweeks
@@ -62,7 +64,7 @@ sub demetric {
     if (my $prefix = $self->get_prefix($string)) {
 	my $tail = substr($string, length($prefix));
 	if ($tail =~ /^sec(ond)?s?$/) {
-	    return ($self->get_metric($prefix), $tail);
+	    return ($self->get_metric($prefix), "sec");
 	}
 	return; # Should this fail, or assume it's a non-metric unit?
     } else {
@@ -87,15 +89,8 @@ sub simple_convert {
 
     # ms == millisec
     if ($from =~ /^(.)s$/) {
-	my @expansions = $self->expand($1);
-	# Only use prefixes smaller than one, and pick the first
-	foreach my $expansion ($self->expand($1)) {
-	    my $full = $expansion . "sec";
-	    my ($mult, $base) = $self->demetric($full);
-	    if ($mult < 1) {
-		return $self->simple_convert($full, $to);
-	    }
-	}
+	my ($expansion) = $self->expand($1);
+        return $self->simple_convert($expansion . "sec", $to);
     }
 
     return; # Failed
@@ -121,11 +116,19 @@ sub get_prefs {
 
 my @BREAKDOWN = qw(year week day hour minute sec ms us ns ps);
 sub render {
-    my ($self, $val, $name, $power) = @_;
-    my $basic = $self->SUPER::render($val, $name, $power);
+    my ($self, $val, $name, $power, $options) = @_;
+    my $full_name = $name;
+    if ($options->{abbreviate}) {
+        if ($name =~ /(\w+)sec/) {
+            my $prefix = $1;
+            my $mabbrev = $self->metric_abbreviation($prefix);
+            $name = $mabbrev . "s" unless $mabbrev eq $prefix;
+        }
+    }
+    my $basic = $self->SUPER::render($val, $name, $power, $options);
     return $basic if $power != 1;
 
-    $val *= $self->simple_convert($name, 'sec');
+    $val *= $self->simple_convert($full_name, 'sec');
     my @spread = $self->spread($val, 'sec', $name, \@BREAKDOWN);
     my $spread = join(" ", map { "$_->[0] $_->[1]" } @spread);
 
