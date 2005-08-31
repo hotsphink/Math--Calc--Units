@@ -63,7 +63,7 @@ sub name_to_canonical {
 
 sub _name_to_canonical {
     my ($unitName) = @_;
-    
+
     # First, check for compound units
     if (my $v = Math::Calc::Units::Convert::Combo->lookup_compound($unitName)) {
 	return @$v;
