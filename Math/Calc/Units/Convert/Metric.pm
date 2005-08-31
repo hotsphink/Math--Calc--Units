@@ -2,7 +2,7 @@ package Math::Calc::Units::Convert::Metric;
 use base 'Math::Calc::Units::Convert::Base';
 use strict;
 
-use vars qw(%niceSmallMetric %metric %pref %abbrev $metric_prefix_test);
+use vars qw(%niceSmallMetric %metric %pref %abbrev %reverse_abbrev $metric_prefix_test);
 
 %niceSmallMetric = ( milli => 1e-3,
 		     micro => 1e-6,
@@ -50,6 +50,8 @@ use vars qw(%niceSmallMetric %metric %pref %abbrev $metric_prefix_test);
 	    f => 'femto',
 );
 
+%reverse_abbrev = reverse %abbrev;
+
 # Cannot use the above tables directly because this class must be
 # overridable.  So the following three methods (get_metric,
 # get_abbrev, and get_prefix) are the only things that are specific to
@@ -84,7 +86,12 @@ sub get_prefix {
 }
 
 sub get_prefixes {
-    return keys %metric;
+    my ($self, $options) = @_;
+    if ($options->{small}) {
+        return grep { $metric{$_} < 1 } keys %metric;
+    } else {
+        return keys %metric;
+    }
 }
 
 sub get_abbrev_prefix {
@@ -163,6 +170,25 @@ sub simple_convert {
     return if ! defined $submult;
 
     return $submult * ($mult_from / $mult_to);
+}
+
+sub metric_abbreviation {
+    my ($self, $prefix) = @_;
+    return $reverse_abbrev{$prefix} || $prefix;
+}
+
+sub render {
+    my ($self, $val, $name, $power, $options) = @_;
+    if ($options->{abbreviate}) {
+        my $stem = $self->canonical_unit;
+        if ($name =~ /(\w+)\Q$stem\E$/) {
+            my $prefix = $reverse_abbrev{$1};
+            if (defined($prefix)) {
+                $name = $prefix . $self->abbreviated_canonical_unit;
+            }
+        }
+    }
+    return $self->SUPER::render($val, $name, $power, $options);
 }
 
 1;
