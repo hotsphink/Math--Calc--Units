@@ -5,12 +5,31 @@ sub major_pref {
     return 0;
 }
 
+# major_variants :void -> ( unit name )
+#
+# Return the set of prefix-free variants of the class that you might
+# want to use as a final result. So for time, this would return
+# "second" and "year" but not "millisecond" or "gigayear".
+#
+# Only this base class will ever use the unit passed in, and that's
+# because this base class is used for unknown units. Subclasses should
+# return a list of variants regardless of what is passed as $unit.
+#
 sub major_variants {
-    my ($self, $major) = @_;
-    return ($major);
+    my ($self, $unit) = @_;
+    return $unit;
 }
 
 # singular : unitName -> unitName
+#
+# Convert a possibly pluralized unit name to the uninflected singular
+# form of the same name.
+#
+# Example: inches -> inch
+# Example: inch -> inch
+#
+# I suppose I ought to optionally allow Lingu::EN::Inflect or whatever
+# it's called.
 #
 sub singular {
     my $self = shift;
@@ -33,7 +52,11 @@ sub variants {
     return ($base, keys %$map);
 }
 
-# unit x unit -> boolean
+# same : unit x unit -> boolean
+#
+# Returns whether the two units match, where a unit is a string (eg
+# "week") and a power. So "days" and "toothpicks" are not the same,
+# nor are feet and square feet.
 sub same {
     my ($self, $u, $v) = @_;
     return 0 if keys %$u != keys %$v;
@@ -44,18 +67,13 @@ sub same {
     return 1;
 }
 
-# simple_convert : unitName x unitName -> multiple:number
+# simple_convert : unitName x unitName -> multiplier
 #
 # Second unit name must be canonical.
 #
 sub simple_convert {
     my ($self, $from, $to) = @_;
     return 1 if $from eq $to;
-
-    {
-	my $canon_unit = $self->canonical_unit();
-	$DB::single = 1 if $canon_unit && $to ne $canon_unit;
-    }
 
     my $map = $self->unit_map();
     my $w = $map->{$from} || $map->{lc($from)};
@@ -77,6 +95,9 @@ sub simple_convert {
 
 # to_canonical : unitName -> amount x unitName
 #
+# Convert the given unit to the canonical unit for this class, along
+# with a conversion factor.
+#
 sub to_canonical {
     my ($self, $unitName) = @_;
     my $canon = $self->canonical_unit();
@@ -89,8 +110,17 @@ sub to_canonical {
     }
 }
 
+# canonical_unit : void -> unit name
+#
+# Return the canonical unit for this class.
+#
 sub canonical_unit {
     return;
+}
+
+sub abbreviated_canonical_unit {
+    my ($self) = @_;
+    return $self->canonical_unit;
 }
 
 #################### RANKING, SCORING, DISPLAYING ##################
@@ -178,6 +208,7 @@ sub range_score {
     return 0.001 + $mulconst * exp(-$n**2/2);
 }
 
+# Infinity-free logarithm
 sub _sillylog {
     my $x = shift;
     return log($x) if $x;
@@ -186,12 +217,18 @@ sub _sillylog {
 
 # pref_score : unitName -> score
 #
+# Maps a unit name (eg week) to a score. Higher scores are more likely
+# to be chosen.
 sub pref_score {
     my ($self, $unitName) = @_;
     my $prefs = $self->get_prefs();
     return $prefs->{$unitName} || $prefs->{default};
 }
 
+# get_prefs : void -> { unit name => score }
+#
+# Return a map of unit names to their score, higher scores meaning
+# they're more likely to be chosen.
 sub get_prefs {
     return { default => 0.1 };
 }
@@ -200,8 +237,15 @@ sub get_ranges {
     return { default => [ 1, undef ] };
 }
 
+# render_unit : unit name x power -> descriptive string
+#
+# Return a rendering of the given unit name and a power to raise the
+# unit to.
+#
+# Example: render_unit("weeks", 2) produces "weeks**2".
+#
 sub render_unit {
-    my ($self, $name, $power) = @_;
+    my ($self, $name, $power, $options) = @_;
     if ($power == 1) {
 	return $name;
     } else {
@@ -209,9 +253,15 @@ sub render_unit {
     }
 }
 
+# render : value x name x power -> descriptive string
+#
+# Return a rendering of the given value with the given units.
+#
+# Example: render(4.8, "weeks", -1) produces "4.8 weeks**-1".
+#
 sub render {
-    my ($self, $val, $name, $power) = @_;
-    return sprintf("%.5g ",$val).$self->render_unit($name, $power);
+    my ($self, $val, $name, $power, $options) = @_;
+    return sprintf("%.5g ",$val).$self->render_unit($name, $power, $options);
 }
 
 sub construct {
