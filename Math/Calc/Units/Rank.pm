@@ -14,10 +14,10 @@ use strict;
 # a magical formula that examines the rates of decay of the scores.
 #
 sub choose_juicy_ones {
-    my ($v, $verbose) = @_;
+    my ($v, $options) = @_;
 
     # Collect the variants of the value, together with their scores.
-    my @variants = rank_variants($v, $verbose); # ( < {old=>new}, score > )
+    my @variants = rank_variants($v, $options); # ( < {old=>new}, score > )
 
     # Remove duplicates
     my %variants; # To remove duplicates: { id => [ {old=>new}, score ] }
@@ -45,9 +45,7 @@ sub choose_juicy_ones {
     my $prev;
     foreach (sort { $b->[0] <=> $a->[0] } @options) {
         my ($score, $val) = @$_;
-#        print "prev: " . ($prev / $score) . "\n" if defined $prev;
         last if (defined $prev && ($prev / $score) > 8);
-#        print "first: " . ($first / $score) . "\n" if defined $first;
         last if (defined $first && ($first / $score) > 25);
         push @juicy, $val;
         $first = $score unless defined $first;
@@ -62,7 +60,7 @@ sub choose_juicy_ones {
 # where map : {original unit => new unit}
 #
 sub rank_variants {
-    my ($v, $verbose) = @_;
+    my ($v, $options) = @_;
 
     $v = canonical($v);
 
@@ -73,7 +71,7 @@ sub rank_variants {
 	@rangeable = keys %$count;
     }
 
-    return rank_power_variants($mag, \@rangeable, $count, $verbose);
+    return rank_power_variants($mag, \@rangeable, $count, $options);
 }
 
 sub choose_major {
@@ -82,13 +80,13 @@ sub choose_major {
     return (sort { $a->[0] <=> $b->[0] } @majors)[-1]->[1];
 }
 
-# rank_power_variants : value x [unit] x {unit=>power} x keepall_flag ->
+# rank_power_variants : value x [unit] x {unit=>power} x options ->
 #  ( <map,score> )
 #
 # $top is the set of units that should be range checked.
 #
 sub rank_power_variants {
-    my ($mag, $top, $power, $verbose) = @_;
+    my ($mag, $top, $power, $options) = @_;
 
     # Recursive case: we have multiple units left, so pick one to be
     # the "major" unit and select the best combination of the other
@@ -106,12 +104,12 @@ sub rank_power_variants {
 	my @ranked; # ( <map,score> )
 
 	# Try every combination of each major variant and the other units
-	foreach my $variant (major_variants($major)) {
+	foreach my $variant (major_variants($major, $options)) {
 	    my $mult = $majorClass->simple_convert($variant, $major);
 	    my $cval = $mag / $mult ** $power->{$major};
 
-	    print "\n --- for $variant ---\n" if $verbose;
-	    my @r = rank_power_variants($cval, $top, \%powerless, $verbose);
+	    print "\n --- for $variant ---\n" if $options->{verbose};
+	    my @r = rank_power_variants($cval, $top, \%powerless, $options);
 	    next if @r == 0;
 
 	    my $best = $r[0];
@@ -119,10 +117,6 @@ sub rank_power_variants {
 	    # Replace score with major pref
 	    $best->[1] = pref_score($variant);
 	    push @ranked, $best;
-	}
-
-	if (@ranked == 0) {
-	    return rank_power_variants($mag, $top, $power, 1, $verbose);
 	}
 
 	return @ranked;
@@ -160,7 +154,7 @@ sub rank_power_variants {
 
 	my $score = score($minimag, $variant, \@vtop);
 	printf "($mag $unit) score %.6f:\t $minimag $variant\n", $score
-	    if $verbose;
+	    if $options->{verbose};
 	push @choices, [ $score, $variant ];
     }
 
@@ -175,14 +169,14 @@ sub rank_power_variants {
 # represented as { lightyears => 1, sec => -2 }); the output is a
 # corresponding string such as "lightyears / sec**2".
 sub render_unit {
-    my $units = shift;
+    my ($units, $options) = @_;
 
     # Positive powers just get appended together with spaces between
     # them.
     my $str = '';
     while (my ($name, $power) = each %$units) {
 	if ($power > 0) {
-	    $str .= get_class($name)->render_unit($name, $power);
+	    $str .= get_class($name)->render_unit($name, $power, $options);
 	    $str .= " ";
 	}
     }
@@ -193,7 +187,7 @@ sub render_unit {
     my $botstr = '';
     while (my ($name, $power) = each %$units) {
 	if ($power < 0) {
-	    $botstr .= get_class($name)->render_unit($name, -$power);
+	    $botstr .= get_class($name)->render_unit($name, -$power, $options);
 	    $botstr .= " ";
 	}
     }
@@ -211,7 +205,7 @@ sub render_unit {
 
 # render : <value,unit> -> string
 sub render {
-    my $v = shift;
+    my ($v, $options) = @_;
     my ($mag, $units) = @$v;
 
     # No units
@@ -219,7 +213,11 @@ sub render {
 	# Special-case percentages
 	my $str = sprintf("%.4g", $mag);
 	if (($mag < 1) && ($mag >= 0.01)) {
-	    $str .= sprintf(" = %.4g percent", 100 * $mag);
+            if ($options->{abbreviate}) {
+                $str .= sprintf(" = %.4g percent", 100 * $mag);
+            } else {
+                $str .= sprintf(" = %.4g%%", 100 * $mag);
+            }
 	}
 	return $str;
     }
@@ -237,12 +235,12 @@ sub render {
     my $str;
     if (@top == 1) {
 	my ($name) = @top;
-	$str = get_class($name)->render($mag, $name, $units->{$name});
+	$str = get_class($name)->render($mag, $name, $units->{$name}, $options);
 	$str .= " ";
     } else {
 	$str = sprintf("%.4g ", $mag);
 	foreach my $name (@top) {
-	    $str .= get_class($name)->render_unit($name, $units->{$name});
+	    $str .= get_class($name)->render_unit($name, $units->{$name}, $options);
 	    $str .= " ";
 	}
     }
@@ -250,7 +248,7 @@ sub render {
     if (@bottom > 0) {
 	my $botstr;
 	foreach my $name (@bottom) {
-	    $botstr .= get_class($name)->render_unit($name, -$units->{$name});
+	    $botstr .= get_class($name)->render_unit($name, -$units->{$name}, $options);
 	    $botstr .= " ";
 	}
 	chop($botstr);
