@@ -7,7 +7,7 @@ use Math::Calc::Units::Convert;
 use base 'Exporter';
 use vars qw($VERSION @EXPORT_OK);
 BEGIN {
-    $VERSION = '1.03';
+    $VERSION = '1.04';
     @EXPORT_OK = qw(calc readable convert equal exact);
 }
 use strict;
@@ -22,9 +22,15 @@ sub calc ($;$) {
 
 # readable : string -> ( string )
 sub readable {
-    my ($expr, $verbose) = @_;
+    my $expr = shift;
+    my %options;
+    if (@_ == 1) {
+        $options{verbose} = shift;
+    } else {
+        %options = @_;
+    }
     my $v = compute($expr);
-    return map { render($_) } choose_juicy_ones($v, $verbose);
+    return map { render($_, \%options) } choose_juicy_ones($v, \%options);
 }
 
 # convert : string x string -> string
@@ -51,8 +57,10 @@ sub equal {
 
 if (!(caller)) {
     my $verbose;
-    if ($ARGV[0] eq '-v') { shift; $verbose = 1; }
-    print "$_\n" foreach readable($ARGV[0], $verbose);
+    my %options;
+    if ($ARGV[0] eq '-v') { shift; $options{verbose} = 1; }
+    if ($ARGV[0] eq '-a') { shift; $options{abbreviate} = 1; }
+    print "$_\n" foreach readable($ARGV[0], %options);
 }
 
 =head1 NAME
