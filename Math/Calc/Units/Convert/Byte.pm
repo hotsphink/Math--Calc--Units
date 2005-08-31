@@ -34,6 +34,8 @@ sub unit_map {
 
 sub canonical_unit { return 'byte'; }
 
+sub abbreviated_canonical_unit { return 'B'; }
+
 # simple_convert : unitName x unitName -> multiplier
 #
 sub simple_convert {
