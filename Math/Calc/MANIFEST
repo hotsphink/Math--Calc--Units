@@ -22,3 +22,4 @@ Units/Convert/Time.pm
 Units/Convert/Date.pm
 Units.pm
 script/ucalc
+META.yml                                 Module meta-data (added by MakeMaker)
