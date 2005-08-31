@@ -1,4 +1,5 @@
 #!/usr/bin/perl -w
+use Getopt::Long;
 use Math::Calc::Units qw(convert readable calc);
 
 sub usage {
@@ -8,12 +9,12 @@ sub usage {
     if ($msg) {
 	print $out "$0: $msg\n";
     }
-   
+
     print $out <<"END";
 usage:
 
 Calculate the given expression, and guess human-readable units for the result:
-    $0 [-v] <expr>
+    $0 [-v] [-a] <expr>
 
 Convert the given expression to the requested units:
     $0 -c <expr> <unit>
@@ -43,25 +44,24 @@ END
 }
 
 my $verbose = 0;
+my $abbreviate = 0;
 my $action = 'readable';
 
-my @args;
-while (@ARGV) {
-    $_ = shift(@ARGV);
-    if ($_ eq '-v')          { $verbose = 1; }
-    elsif (/^-c|--convert$/) { $action = 'convert'; }
-    elsif (/^-h|--help$/)    { usage("", 0); }
-    else                     { push @args, $_; }
-}
+GetOptions("verbose|v!" => \$verbose,
+           "abbreviate|abbrev|a" => \$abbreviate,
+           "convert|c!" => sub { $action = 'convert' },
+           "help|h!" => sub { usage("", 0) },
+          )
+  or usage("invalid arguments", 1);
 
 if ($action eq 'convert') {
-    usage("not enough args", 1) if (@args < 2);
-    usage("too many args", 1) if (@args > 2);
-    print convert($args[0], $args[1]), "\n";
+    usage("not enough args", 1) if (@ARGV < 2);
+    usage("too many args", 1) if (@ARGV > 2);
+    print convert($ARGV[0], $ARGV[1]), "\n";
 } elsif ($action eq 'readable') {
-    usage("", 0) if @args == 0;
-    usage("too many args", 1) if (@args > 1);
-    print "$_\n" foreach readable($args[0], $verbose);
+    usage("", 0) if @ARGV == 0;
+    usage("too many ARGV", 1) if (@ARGV > 1);
+    print "$_\n" foreach readable($ARGV[0], verbose => $verbose, abbreviate => $abbreviate);
 }
 
 1;
