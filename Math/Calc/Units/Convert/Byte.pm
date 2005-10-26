@@ -1,11 +1,12 @@
 package Math::Calc::Units::Convert::Byte;
 use base 'Math::Calc::Units::Convert::Base2Metric';
 use strict;
-use vars qw(%units %pref %ranges %total_unit_map);
 
-%units = ( bit => [ 1/8, 'byte' ] );
-%pref = ( bit => 0.1, default => 1 );
-%ranges = ( default => [ 1, 999 ] );
+my %units = ( bit => [ 1/8, 'byte' ] );
+my %pref = ( bit => 0.1, default => 1 );
+my %ranges = ( default => [ 1, 999 ] );
+
+my %total_unit_map;
 
 sub major_pref {
     return 1;
@@ -50,7 +51,7 @@ sub simple_convert {
 
     # mb == megabyte
     if ($from =~ /^(.)b(yte(s?))?$/i) {
-	if (my $prefix = $self->expand($1)) {
+	if (my ($prefix) = $self->expand($1)) {
 	    return $self->simple_convert($prefix . "byte", $to);
 	}
     }

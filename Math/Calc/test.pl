@@ -76,7 +76,7 @@ ok(equal("1byte/Kbps", "(1/(1024/8)) sec"), "complex type on bottom");
 ok((grep { /./ } readable("10MB / 384Kbps")), "doc example 1");
 ok((grep { /./ } readable("8KB / (8KB/(20MB/sec) + 15ms)")), "doc example 2");
 ok((grep { /./ } readable("((1sec/20MB) + 15ms/8KB) ** -1")), "doc example 3");
-ok(convert("2MB/sec", "GB/week") =~ m!1181.2 GB / week!, "doc example 4");
+ok(convert("2MB/sec", "GB/week") =~ m!1181[\.\d]* GB / week!, "doc example 4");
 ok((grep { /714 angel/ } readable("42 angels/pinhead * 17 pinheads")), "doc example 5");
 
 # 1.02 Fixes
@@ -114,5 +114,12 @@ ok(equal("8 ks", "8000 sec"), "ks handling");
 
 # Tentative future plans
 #ok(equal("4min 3sec", "4min + 3 sec"), "M min S sec input");
+
+# Distances
+ok(equal("8 km", "8000 meter"), "km handling");
+ok(equal("25.4 cm", "10 inches"), "centimeter -> inches");
+ok((readable('2 feet - 12 inches'))[0] =~ /1 foot/, "feet/inches math");
+$DB::single = 1;
+ok((readable('4000 feet', abbreviate => 1))[0] =~ /\bkm\b/, "abbreviation");
 
 exit($STATUS);

@@ -42,7 +42,6 @@ sub same_units {
 
 sub canonical {
     my ($v) = @_;
-
     my $c = to_canonical($v->[1]);
     my $w = [ $v->[0] * $c->[0], $c->[1] ];
     return $w;

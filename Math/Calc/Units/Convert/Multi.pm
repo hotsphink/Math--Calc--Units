@@ -10,6 +10,7 @@ BEGIN {
 require Math::Calc::Units::Convert::Time;
 require Math::Calc::Units::Convert::Byte;
 require Math::Calc::Units::Convert::Date;
+require Math::Calc::Units::Convert::Distance;
 require Math::Calc::Units::Convert::Combo;
 use strict;
 use vars qw(@UnitClasses);
@@ -17,6 +18,7 @@ use vars qw(@UnitClasses);
 @UnitClasses = qw(Math::Calc::Units::Convert::Time
 		  Math::Calc::Units::Convert::Byte
 		  Math::Calc::Units::Convert::Date
+		  Math::Calc::Units::Convert::Distance
 		  Math::Calc::Units::Convert::Combo);
 
 # to_canonical : unit -> value

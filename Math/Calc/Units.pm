@@ -7,7 +7,7 @@ use Math::Calc::Units::Convert;
 use base 'Exporter';
 use vars qw($VERSION @EXPORT_OK);
 BEGIN {
-    $VERSION = '1.04';
+    $VERSION = '1.05';
     @EXPORT_OK = qw(calc readable convert equal exact);
 }
 use strict;
@@ -132,7 +132,7 @@ values.
 
 =head1 AUTHOR
 
-Steve Fink, sfink@cpan.org
+Steve Fink <sfink@cpan.org>
 
 =head1 SEE ALSO
 

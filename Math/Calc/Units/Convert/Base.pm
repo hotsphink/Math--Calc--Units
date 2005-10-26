@@ -222,7 +222,8 @@ sub _sillylog {
 sub pref_score {
     my ($self, $unitName) = @_;
     my $prefs = $self->get_prefs();
-    return $prefs->{$unitName} || $prefs->{default};
+    my $specific = $prefs->{$unitName};
+    return defined($specific) ? $specific : $prefs->{default};
 }
 
 # get_prefs : void -> { unit name => score }

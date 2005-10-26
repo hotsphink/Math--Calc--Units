@@ -61,7 +61,8 @@ sub pref_score {
     my ($self, $unitName) = @_;
     my $prefix = $self->get_prefix($unitName);
     $unitName = substr($unitName, length($prefix || ""));
-    return $self->prefix_pref($prefix) * $self->SUPER::pref_score($unitName);
+    my $prefix_pref = defined($prefix) ? $self->prefix_pref($prefix) : 1;
+    return $prefix_pref * $self->SUPER::pref_score($unitName);
 }
 
 sub get_metric {

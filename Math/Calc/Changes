@@ -16,3 +16,13 @@ Revision history for Perl extension Math::Calc::Units.
         - added constructor syntax for timestamps & dates
         - fixed endless recursion bug
         - added years (ugh... inexact unit)
+
+1.03
+        - Fixed 0.89 gigabytes getting described as gigabits
+
+1.04
+        - Implemented -a flag (aka abbreviate=>1 option) to spit out abbreviated units
+
+1.05  Tue Oct 25 17:29:00 2005
+        - implemented distances
+        - cleaned up a few uses of uninitialized stuff
