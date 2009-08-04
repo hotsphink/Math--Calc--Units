@@ -26,3 +26,6 @@ Revision history for Perl extension Math::Calc::Units.
 1.05  Tue Oct 25 17:29:00 2005
         - implemented distances
         - cleaned up a few uses of uninitialized stuff
+
+1.06  Tue Oct 25 17:29:00 2005
+        - silly release to bump up kwalitee score

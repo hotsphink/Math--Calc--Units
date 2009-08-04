@@ -5,7 +5,8 @@ LICENSE
 MANIFEST
 Makefile.PL
 README
-test.pl
+t/main.t
+t/pod.t
 Units/Compute.pm
 Units/Convert.pm
 Units/Grammar.pm

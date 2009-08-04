@@ -3,7 +3,7 @@
 
 ######################### We start with some black magic to print on failure.
 
-BEGIN { $| = 1; print "1..60\n"; }
+BEGIN { $| = 1; print "1..64\n"; }
 END { print "not ok 1 - failed to use Math::Calc::Units\n" unless $loaded; }
 use Math::Calc::Units qw(calc readable convert equal);
 $loaded = 1;
@@ -119,7 +119,6 @@ ok(equal("8 ks", "8000 sec"), "ks handling");
 ok(equal("8 km", "8000 meter"), "km handling");
 ok(equal("25.4 cm", "10 inches"), "centimeter -> inches");
 ok((readable('2 feet - 12 inches'))[0] =~ /1 foot/, "feet/inches math");
-$DB::single = 1;
 ok((readable('4000 feet', abbreviate => 1))[0] =~ /\bkm\b/, "abbreviation");
 
 exit($STATUS);

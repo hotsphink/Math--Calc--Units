@@ -7,7 +7,7 @@ use Math::Calc::Units::Convert;
 use base 'Exporter';
 use vars qw($VERSION @EXPORT_OK);
 BEGIN {
-    $VERSION = '1.05';
+    $VERSION = '1.06';
     @EXPORT_OK = qw(calc readable convert equal exact);
 }
 use strict;
@@ -127,8 +127,8 @@ without it.
 
 If you are just trying to convert from one unit to another, you'll
 probably be better off with C<Math::Units> or C<Convert::Units>. This
-module is really just for converting to and from human-readable
-values.
+module really only makes sense when you're converting to and from
+human-readable values.
 
 =head1 AUTHOR
 
