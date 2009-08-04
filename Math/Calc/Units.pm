@@ -7,7 +7,7 @@ use Math::Calc::Units::Convert;
 use base 'Exporter';
 use vars qw($VERSION @EXPORT_OK);
 BEGIN {
-    $VERSION = '1.06';
+    $VERSION = '1.07';
     @EXPORT_OK = qw(calc readable convert equal exact);
 }
 use strict;
@@ -33,7 +33,7 @@ sub readable {
     return map { render($_, \%options) } choose_juicy_ones($v, \%options);
 }
 
-# convert : string x string -> string
+# convert : string x string [ x boolean ] -> string
 sub convert ($$;$) {
     my ($expr, $units, $exact) = @_;
     my $v = compute($expr);
